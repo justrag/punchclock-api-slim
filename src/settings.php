@@ -4,27 +4,23 @@ return [
         'displayErrorDetails' => true, // set to false in production
         'addContentLengthHeader' => false, // Allow the web server to send the content-length header
 
-        // Eloquent settings
+        // DB settings
         'determineRouteBeforeAppMiddleware' => false,
         'db' => [
             'driver' => 'mysql',
-            'host' => 'localhost',
-            'database' => 'test1',
-            'username' => 'test1',
-            'password' => 'alamakota',
+            'host' => getenv('DB_HOST'),
+            'database' => getenv('DB_NAME'),
+            'username' => getenv('DB_USER'),
+            'password' => getenv('DB_PASSWORD'),
             'charset'   => 'utf8',
             'collation' => 'utf8_unicode_ci',
             'prefix'    => '',
-        ],
-
-        // Renderer settings
-        'renderer' => [
-            'template_path' => __DIR__ . '/../templates/',
+            'limit' => 10,
         ],
 
         // Monolog settings
         'logger' => [
-            'name' => 'slim-api-app',
+            'name' => 'RejestrAPI',
             'level' => \Monolog\Logger::DEBUG,
         ],
     ],

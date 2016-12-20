@@ -1,6 +1,5 @@
 <?php
 // DIC configuration
-
 $container = $app->getContainer();
 
 // monolog
@@ -15,7 +14,7 @@ $container['logger'] = function ($c) {
 // PDO database library 
 $container['db'] = function ($c) {
     $settings = $c->get('settings')['db'];
-    $pdo = new PDO("mysql:host=" . $settings['host'] . ";dbname=" . $settings['database'],
+    $pdo = new PDO($settings['driver'] . ":host=" . $settings['host'] . ";dbname=" . $settings['database'],
         $settings['username'], $settings['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
