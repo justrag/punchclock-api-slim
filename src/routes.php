@@ -23,18 +23,19 @@ $app->get('/vendors', function ($req, $resp, $args) {
   $this->logger->info("/vendors route; limit: ".var_export($limit, true)." sortColumn: ".var_export($sortColumn, true)." sortDirection: ".var_export($sortDirection, true));
 
   $queryColumn = $req->getQueryParam('$queryColumn');
-  if (in_array($queryColumn,['name','uuid'])) {
-    $queryString = $req->getQueryParam('$queryString');
-    $query = $this->db->prepare("SELECT * FROM vendors WHERE $queryColumn LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+  $queryString = $req->getQueryParam('$queryString');
+  if (in_array($queryColumn,['name','uuid']) && !empty($queryString)) {
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM vendors WHERE $queryColumn LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
     $query->bindValue(':queryString', "%$queryString%", PDO::PARAM_STR);
 } else {
-    $query = $this->db->prepare("SELECT * FROM vendors ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS * FROM vendors ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
 }
   $query->bindValue(':limit', $limit, PDO::PARAM_INT);
   $query->bindValue(':skip', $skip, PDO::PARAM_INT);
   $query->execute();
   $vendors = $query->fetchAll();
-  return $resp->withJson($vendors);
+  $total = $this->db->query('SELECT FOUND_ROWS();')->fetch(PDO::FETCH_COLUMN);
+  return $resp->withJson(['limit' => $limit, 'total' => $total, 'data' => $vendors]);
 });
 
 $app->get('/[{name}]', function ($req, $resp, $args) {
