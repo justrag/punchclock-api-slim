@@ -3,11 +3,36 @@
 $container = $app->getContainer();
 
 // monolog
-$container['logger'] = function ($c) {
+// $container['logger'] = function ($c) {
+//     $settings = $c->get('settings')['logger'];
+//     $logger = new Monolog\Logger($settings['name']);
+//     $logger->pushProcessor(new Monolog\Processor\UidProcessor());
+//     $logger->pushHandler(new Monolog\Handler\ErrorLogHandler(0, $settings['level']));
+//     return $logger;
+// };
+
+use Monolog\Logger;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\NullHandler;
+use Monolog\Formatter\LineFormatter;
+
+$container["logger"] = function ($c) {
     $settings = $c->get('settings')['logger'];
-    $logger = new Monolog\Logger($settings['name']);
-    $logger->pushProcessor(new Monolog\Processor\UidProcessor());
-    $logger->pushHandler(new Monolog\Handler\ErrorLogHandler(0, $settings['level']));
+    $logger = new Logger($settings['name']);
+
+    $formatter = new LineFormatter(
+        "[%datetime%] [%level_name%]: %message% %context%\n",
+        null,
+        true,
+        true
+    );
+
+    /* Log to timestamped files */
+    $rotating = new RotatingFileHandler(__DIR__ . "/../logs/slim.log", 0, Logger::DEBUG);
+    $rotating->setFormatter($formatter);
+    $logger->pushHandler($rotating);
+
     return $logger;
 };
 

@@ -1,6 +1,7 @@
-# slim-api-skeleton
+Rejestr API in Slim/PHP
 
-This is a simple Slim Framework API skeleton based off the Slim-Skeleton.
+Random Notes in development
 
-There's no view layer and logging is to the error_log().
-
+How to change database structure
+ALTER TABLE vendors ADD Column created_at TIMESTAMP DEFAULT '1976-11-20 12:00:00', ADD Column updated_at TIMESTAMP DEFAULT now() ON UPDATE now();
+ALTER  TABLE vendors MODIFY Column created_at TIMESTAMP DEFAULT now();
