@@ -1,4 +1,9 @@
 <?php
+
+use Ramsey\Uuid\Uuid;
+use Firebase\JWT\JWT;
+use Tuupola\Base62;
+
 // Routes
 
 // get all vendors
@@ -46,18 +51,111 @@ $app->post('/vendors', function ($req, $resp, $args) {
     // no name given - problem!!!
     return $this->response->withStatus(400)->withJson(['error' => ['message' => 'No name given!']]);
   } else {
-    $uuid = Ramsey\Uuid\Uuid::uuid4()->toString();
-    $sql = "INSERT INTO vendors (name, uuid) VALUES (:name, :uuid)";
+    $uuid = Uuid::uuid4()->toString();
     $query = $this->db->prepare("INSERT INTO vendors (name, uuid) VALUES (:name, :uuid)");
     $query->bindParam("name", $name);
     $query->bindParam("uuid", $uuid);
     try {
       $query->execute();
     } catch(PDOException $e) {
-      //an error raised by PDO - CHECKME: should it be 500?
-      return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
     }
 //    $input['id'] = $this->db->lastInsertId();
     return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'name' => $name]]);
   }
     });
+
+$app->post('/auth/create', function ($req, $resp, $args) {
+  $body = $req->getParsedBody();
+  $this->logger->info("/auth/create POST route; reqbody: ".var_export($body, true));
+
+$login=$body['login'];
+if (empty($login) || strlen($login) < 3 ) {
+  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
+}
+$password=$body['password'];
+if (empty($password) || strlen($password) < 8 ) {
+  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
+}
+$email=$body['email'];
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Email incorrect!"]]);
+}
+$name=$body['name'];
+if (empty($name) || strlen($name) < 5 ) {
+  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Name's too short!"]]);
+}
+// Create password hash
+$passwordHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => 12]);
+if ($passwordHash === false) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password hash failed!"]]);
+}
+
+    $uuid = Uuid::uuid4()->toString();
+    $query = $this->db->prepare("INSERT INTO users (uuid, login, password, email, name) VALUES (:uuid, :login, :password, :email, :name)");
+    $query->bindParam("uuid", $uuid);
+    $query->bindParam("login", $login);
+    $query->bindParam("password", $passwordHash);
+    $query->bindParam("email", $email);
+    $query->bindParam("name", $name);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      //an error raised by PDO - CHECKME: should it be 400 or 500 or...?
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+    return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'login' => $login, 'email' => $email, 'name' => $name]]);
+    });
+
+$app->post('/auth/login', function ($req, $resp, $args) {
+  $body = $req->getParsedBody();
+  $this->logger->info("/auth/login POST route; reqbody: ".var_export($body, true));
+
+$login=$body['login'];
+if (empty($login) || strlen($login) < 3 ) {
+  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
+}
+$password=$body['password'];
+if (empty($password) || strlen($password) < 8 ) {
+  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
+}
+    $query = $this->db->prepare("SELECT password FROM users WHERE login=:login");
+    $query->bindValue(':login', $login, PDO::PARAM_STR);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+$passwordHash = $query->fetchColumn();
+if (password_verify($password, $passwordHash) === false) {
+  return $this->response->withStatus(401)->withJson(['error' => ['message' => "Incorrect login or password"]]);
+}
+
+///////
+    $now = new DateTime();
+    $future = new DateTime("now +9 hours");
+    $server = $req->getServerParams();
+
+    $jti = Base62::encode(random_bytes(16));
+
+    $payload = [
+        "iat" => $now->getTimeStamp(),
+        "exp" => $future->getTimeStamp(),
+        "jti" => $jti,
+        "iss" => $server["HTTP_HOST"],
+//        "sub" => $server["PHP_AUTH_USER"],
+//        "scope" => $scopes
+        "data" => [
+          "userId" => "dafdasfdasdf",
+          "userLogin" => $login,
+        ]
+    ];
+
+    $secret = getenv("JWT_SECRET");
+    $token = JWT::encode($payload, $secret, "HS256");
+    $data["status"] = "ok";
+    $data["token"] = $token;
+
+////////
+    return $this->response->withJson(['data' => $data]);
+});
