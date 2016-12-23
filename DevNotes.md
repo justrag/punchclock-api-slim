@@ -8,3 +8,9 @@ ALTER TABLE users CHANGE `token` `email` VARCHAR(255) NOT NULL
 
 Dumping schema:
 mysqldump --single-transaction -u test1 -p -d test1 > SCHEMA.SQL
+
+MySQL logs
+SET GLOBAL general_log_file = '/tmp/BULBA20161220';
+SET GLOBAL general_log = 'ON';
+...
+SET GLOBAL general_log = 'OFF';
