@@ -24,16 +24,18 @@ DROP TABLE IF EXISTS `packs`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `packs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `uuid` varchar(255) NOT NULL,
   `vendor_id` int(11) NOT NULL,
-  `paper` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `paper` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `access` varchar(64) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`),
+  UNIQUE KEY `access` (`access`),
   KEY `fk_packs_1_idx` (`vendor_id`),
   CONSTRAINT `fk_packs_1` FOREIGN KEY (`vendor_id`) REFERENCES `vendors` (`id`) ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -45,15 +47,15 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `login` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `email` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `uuid` varchar(255) NOT NULL,
+  `login` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_UNIQUE` (`login`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -65,14 +67,14 @@ DROP TABLE IF EXISTS `vendors`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vendors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `uuid` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -84,4 +86,4 @@ CREATE TABLE `vendors` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-12-23 13:31:39
+-- Dump completed on 2016-12-28 21:48:42

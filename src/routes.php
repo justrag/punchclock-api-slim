@@ -166,3 +166,96 @@ if (password_verify($password, $passwordHash) === false) {
 ////////
     return $this->response->withJson(['data' => $data]);
 });
+
+$app->get('/packs', function ($req, $resp, $args) {
+  $settings = $this->get('settings')['db'];
+
+  $limit = filter_var($req->getQueryParam('$limit'), FILTER_VALIDATE_INT, ['options' => [
+        'default' => $settings['limit'], // value to return if the filter fails
+        'min_range' => 1,
+        'max_range' => $settings['limit']
+    ]]);
+  $skip = filter_var($req->getQueryParam('$skip'), FILTER_VALIDATE_INT, ['options' => [
+        'default' => 0,
+        'min_range' => 0,
+    ]]);
+
+  $sortColumn = filter_var($req->getQueryParam('$sortColumn'), FILTER_SANITIZE_STRING);
+  if (!in_array($sortColumn,['vendor_id','paper','uuid'])) {$sortColumn='paper';}
+  $sortDirection = filter_var($req->getQueryParam('$sortDirection'), FILTER_SANITIZE_STRING);
+  if (!in_array($sortDirection,['asc','desc'])) {$sortDirection='asc';}
+
+  $this->logger->info("/packs route; limit: ".var_export($limit, true)." sortColumn: ".var_export($sortColumn, true)." sortDirection: ".var_export($sortDirection, true));
+
+  $queryColumn = filter_var($req->getQueryParam('$queryColumn'), FILTER_SANITIZE_STRING);
+  $queryString = filter_var($req->getQueryParam('$queryString'), FILTER_SANITIZE_STRING);
+  if (in_array($queryColumn,['paper','uuid']) && !empty($queryString)) {
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS uuid,paper,created_at,updated_at FROM packs WHERE $queryColumn LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query->bindValue(':queryString', "%$queryString%", PDO::PARAM_STR);
+} else if ($queryColumn==='vendor') {
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS uuid,v.name,paper,created_at,updated_at FROM packs p JOIN vendors v WHERE v.name LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query->bindValue(':queryString', "%$queryString%", PDO::PARAM_STR);
+} else {
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS uuid,paper,created_at,updated_at FROM packs ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+}
+  $query->bindValue(':limit', $limit, PDO::PARAM_INT);
+  $query->bindValue(':skip', $skip, PDO::PARAM_INT);
+  $query->execute();
+  $packs = $query->fetchAll();
+  $total = $this->db->query('SELECT FOUND_ROWS();')->fetch(PDO::FETCH_COLUMN);
+  return $resp->withJson(['limit' => $limit, 'total' => $total, 'data' => $packs]);
+});
+
+$app->post('/packs', function ($req, $resp, $args) {
+  $body = $req->getParsedBody();
+  $this->logger->info("/packs POST route; reqbody: ".var_export($body, true));
+  $paper=$body['paper'];
+  $vendor=$body['vendor']; 
+
+  if (empty($vendor)) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'No vendor given!']]);
+  } else {
+   $query = $this->db->prepare("SELECT id FROM vendors WHERE NAME=:name");
+   $query->bindParam("name", $vendor);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+  $vendor_id = $query->fetchColumn();
+  $this->db->beginTransaction();
+  if (!$vendor_id) {
+  // Create a new vendor
+    $uuid = Uuid::uuid4()->toString();
+    $query = $this->db->prepare("INSERT INTO vendors (name, uuid) VALUES (:name, :uuid)");
+    $query->bindParam("name", $vendor);
+    $query->bindParam("uuid", $uuid);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+    $vendor_id=$this->db->lastInsertId();
+  }
+
+    $uuid = Uuid::uuid4()->toString();
+    // TODO: Add 'access'
+    if ($paper) {
+      $query = $this->db->prepare("INSERT INTO packs (vendor_id, paper, uuid) VALUES (:vendor_id, :paper, :uuid)");
+      $query->bindParam("paper", $paper);
+    } else {
+      $query = $this->db->prepare("INSERT INTO packs (vendor_id, uuid) VALUES (:vendor_id, :uuid)");
+    }
+    $query->bindParam("vendor_id", $vendor_id);
+    $query->bindParam("uuid", $uuid);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+    $pack_id = $this->db->lastInsertId();
+      $this->db->commit();
+//    $input['id'] = $this->db->lastInsertId();
+    return $this->response->withStatus(201)->withJson(['data' => ['id' => $pack_id, 'uuid' => $uuid, 'vendor_id' => $vendor_id]]);
+  }
+    });
