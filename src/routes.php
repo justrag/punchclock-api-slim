@@ -119,15 +119,20 @@ $password=$body['password'];
 if (empty($password) || strlen($password) < 8 ) {
   return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
 }
-    $query = $this->db->prepare("SELECT password FROM users WHERE login=:login");
+    $query = $this->db->prepare("SELECT uuid, password FROM users WHERE login=:login");
     $query->bindValue(':login', $login, PDO::PARAM_STR);
     try {
       $query->execute();
     } catch(PDOException $e) {
       return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
     }
-$passwordHash = $query->fetchColumn();
+//$passwordHash = $query->fetchColumn();
+$row = $query->fetch();
+$passwordHash = $row['password'];
+$id=$row['uuid'];
+
 if (password_verify($password, $passwordHash) === false) {
+  $this->logger->info("password_verify failed: login ".$login." password ".$password);
   return $this->response->withStatus(401)->withJson(['error' => ['message' => "Incorrect login or password"]]);
 }
 
@@ -154,6 +159,8 @@ if (password_verify($password, $passwordHash) === false) {
     $secret = getenv("JWT_SECRET");
     $token = JWT::encode($payload, $secret, "HS256");
     $data["status"] = "ok";
+    $data["id"] = $id;
+    $data["login"] = $login;
     $data["token"] = $token;
 
 ////////
