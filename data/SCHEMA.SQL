@@ -29,10 +29,11 @@ CREATE TABLE `packs` (
   `paper` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `access` varchar(64) COLLATE utf8_unicode_ci NOT NULL,
+  `access_seq` int(11) NOT NULL,
+  `access_year` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`),
-  UNIQUE KEY `access` (`access`),
+  UNIQUE KEY `access` (`access_seq`,`access_year`),
   KEY `fk_packs_1_idx` (`vendor_id`),
   CONSTRAINT `fk_packs_1` FOREIGN KEY (`vendor_id`) REFERENCES `vendors` (`id`) ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -93,7 +94,7 @@ CREATE TABLE `vendors` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`),
   UNIQUE KEY `name_UNIQUE` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -114,4 +115,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-12-29 12:54:47
+-- Dump completed on 2016-12-29 20:27:01

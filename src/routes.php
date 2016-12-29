@@ -239,13 +239,22 @@ $app->post('/packs', function ($req, $resp, $args) {
   }
 
     $uuid = Uuid::uuid4()->toString();
-    // TODO: Add 'access'
+
+   $query = $this->db->prepare("SELECT IFNULL(max(access_seq),0) FROM packs WHERE access_year=YEAR(NOW())");
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+  $prevAccess = $query->fetchColumn();
+  $access = $prevAccess + 1;
     if ($paper) {
-      $query = $this->db->prepare("INSERT INTO packs (vendor_id, paper, uuid) VALUES (:vendor_id, :paper, :uuid)");
+      $query = $this->db->prepare("INSERT INTO packs (vendor_id, access_seq, access_year, paper, uuid) VALUES (:vendor_id, :access, YEAR(NOW()), :paper, :uuid)");
       $query->bindParam("paper", $paper);
     } else {
-      $query = $this->db->prepare("INSERT INTO packs (vendor_id, uuid) VALUES (:vendor_id, :uuid)");
+      $query = $this->db->prepare("INSERT INTO packs (vendor_id, access_seq, access_year, uuid) VALUES (:vendor_id, :access, YEAR(NOW()), :uuid)");
     }
+    $query->bindParam("access", $access);
     $query->bindParam("vendor_id", $vendor_id);
     $query->bindParam("uuid", $uuid);
     try {
@@ -253,9 +262,8 @@ $app->post('/packs', function ($req, $resp, $args) {
     } catch(PDOException $e) {
       return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
     }
-    $pack_id = $this->db->lastInsertId();
+    //$pack_id = $this->db->lastInsertId();
       $this->db->commit();
-//    $input['id'] = $this->db->lastInsertId();
-    return $this->response->withStatus(201)->withJson(['data' => ['id' => $pack_id, 'uuid' => $uuid, 'vendor_id' => $vendor_id]]);
+    return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'vendor_id' => $vendor_id, 'access' => $access]]);
   }
     });
