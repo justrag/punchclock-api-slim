@@ -15,7 +15,7 @@ return [
             'charset'   => 'utf8',
             'collation' => 'utf8_unicode_ci',
             'prefix'    => '',
-            'limit' => 10,
+            'limit' => 100,
         ],
 
         // Monolog settings

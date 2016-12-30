@@ -166,6 +166,14 @@ if (password_verify($password, $passwordHash) === false) {
 ////////
     return $this->response->withJson(['data' => $data]);
 });
+$app->get('/vendornames/{search}', function ($req, $resp, $args) {
+  $search = filter_var($req->getAttribute('search'), FILTER_SANITIZE_STRING);
+  $query = $this->db->prepare("SELECT name FROM vendors WHERE name LIKE :search ORDER BY name LIMIT 10");
+  $query->bindValue(':search', "%$search%", PDO::PARAM_STR);
+  $query->execute();
+  $vendornames=$query->fetchAll(PDO::FETCH_COLUMN);
+  return $resp->withJson(['vendornames' => $vendornames]);
+});
 
 $app->get('/packs', function ($req, $resp, $args) {
   $settings = $this->get('settings')['db'];
@@ -180,23 +188,39 @@ $app->get('/packs', function ($req, $resp, $args) {
         'min_range' => 0,
     ]]);
 
-  $sortColumn = filter_var($req->getQueryParam('$sortColumn'), FILTER_SANITIZE_STRING);
-  if (!in_array($sortColumn,['vendor_id','paper','uuid'])) {$sortColumn='paper';}
   $sortDirection = filter_var($req->getQueryParam('$sortDirection'), FILTER_SANITIZE_STRING);
   if (!in_array($sortDirection,['asc','desc'])) {$sortDirection='asc';}
+
+  $sortColumn = filter_var($req->getQueryParam('$sortColumn'), FILTER_SANITIZE_STRING);
+  if (!in_array($sortColumn,['vendor','access','created_at','paper','uuid'])) {
+    $sortColumn='p.paper';
+  } else {
+    if ($sortColumn == 'vendor') {
+      $sortColumn = 'v.name';
+    } else if ($sortColumn == 'access') {
+      $sortColumn = 'p.access_year '.$sortDirection.', p.access_seq';
+    } else {
+    $sortColumn='p.'.$sortColumn;
+  }
+  };
 
   $this->logger->info("/packs route; limit: ".var_export($limit, true)." sortColumn: ".var_export($sortColumn, true)." sortDirection: ".var_export($sortDirection, true));
 
   $queryColumn = filter_var($req->getQueryParam('$queryColumn'), FILTER_SANITIZE_STRING);
   $queryString = filter_var($req->getQueryParam('$queryString'), FILTER_SANITIZE_STRING);
+  $this->logger->info("queryColumn: ".$queryColumn." queryString: ".$queryString);
   if (in_array($queryColumn,['paper','uuid']) && !empty($queryString)) {
-    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS uuid,paper,created_at,updated_at FROM packs WHERE $queryColumn LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id WHERE p.$queryColumn LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
     $query->bindValue(':queryString', "%$queryString%", PDO::PARAM_STR);
-} else if ($queryColumn==='vendor') {
-    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS uuid,v.name,paper,created_at,updated_at FROM packs p JOIN vendors v WHERE v.name LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+} else if ($queryColumn=='access') {
+  $this->logger->info("query for access: ".$queryString);
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id WHERE p.access_seq=:queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query->bindValue(':queryString', $queryString, PDO::PARAM_INT);
+} else if ($queryColumn=='vendor') {
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id WHERE v.name LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
     $query->bindValue(':queryString', "%$queryString%", PDO::PARAM_STR);
 } else {
-    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS uuid,paper,created_at,updated_at FROM packs ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
 }
   $query->bindValue(':limit', $limit, PDO::PARAM_INT);
   $query->bindValue(':skip', $skip, PDO::PARAM_INT);
@@ -264,6 +288,7 @@ $app->post('/packs', function ($req, $resp, $args) {
     }
     //$pack_id = $this->db->lastInsertId();
       $this->db->commit();
-    return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'vendor_id' => $vendor_id, 'access' => $access]]);
+      $this->logger->info("new access: ".date('Y')."EO/".sprintf("%05d", $access));
+    return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'vendor_id' => $vendor_id, 'access' => date('Y')."EO/".sprintf("%05d", $access)]]);
   }
     });
