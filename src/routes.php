@@ -136,7 +136,6 @@ if (password_verify($password, $passwordHash) === false) {
   return $this->response->withStatus(401)->withJson(['error' => ['message' => "Incorrect login or password"]]);
 }
 
-///////
     $now = new DateTime();
     $future = new DateTime("now +9 hours");
     $server = $req->getServerParams();
@@ -163,9 +162,10 @@ if (password_verify($password, $passwordHash) === false) {
     $data["login"] = $login;
     $data["token"] = $token;
 
-////////
     return $this->response->withJson(['data' => $data]);
 });
+
+
 $app->get('/vendornames/{search}', function ($req, $resp, $args) {
   $search = filter_var($req->getAttribute('search'), FILTER_SANITIZE_STRING);
   $query = $this->db->prepare("SELECT name FROM vendors WHERE name LIKE :search ORDER BY name LIMIT 10");
