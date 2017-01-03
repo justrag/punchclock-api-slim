@@ -216,6 +216,10 @@ $app->get('/packs', function ($req, $resp, $args) {
   $this->logger->info("query for access: ".$queryString);
     $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id WHERE p.access_seq=:queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
     $query->bindValue(':queryString', $queryString, PDO::PARAM_INT);
+} else if ($queryColumn=='created_at') {
+  $this->logger->info("query for created_at: ".$queryString);
+    $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id WHERE day(p.created_at)=:queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
+    $query->bindValue(':queryString', $queryString, PDO::PARAM_INT);
 } else if ($queryColumn=='vendor') {
     $query = $this->db->prepare("SELECT SQL_CALC_FOUND_ROWS p.uuid,concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access,v.name as vendor,p.paper,p.created_at,p.updated_at FROM packs p JOIN vendors v on p.vendor_id=v.id WHERE v.name LIKE :queryString ORDER BY $sortColumn $sortDirection LIMIT :limit OFFSET :skip");
     $query->bindValue(':queryString', "%$queryString%", PDO::PARAM_STR);
