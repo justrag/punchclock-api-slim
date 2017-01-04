@@ -231,7 +231,7 @@ $app->get('/packs', function ($req, $resp, $args) {
   $query->execute();
   $packs = $query->fetchAll();
   $total = $this->db->query('SELECT FOUND_ROWS();')->fetch(PDO::FETCH_COLUMN);
-  return $resp->withJson(['limit' => $limit, 'total' => $total, 'data' => $packs]);
+  return $resp->withJson(['limit' => $limit, 'skip' => $skip, 'total' => $total, 'data' => $packs]);
 });
 
 $app->post('/packs', function ($req, $resp, $args) {
