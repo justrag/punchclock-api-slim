@@ -31,3 +31,6 @@ mysql -u root -p test1 <SCHEMA.SQL
 
 Utwórz użytkownika rejestrtest
 curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" -d '{"login":"rejestrtest", "password":"rejestrtest","email":"rejestrtest@example.com","name":"Rejestr Test"}' "http://localhost:8080/auth/login"
+
+Start API server
+php -S localhost:8080 -t public/
