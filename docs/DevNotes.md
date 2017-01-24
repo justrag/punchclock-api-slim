@@ -34,3 +34,9 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" -
 
 Start API server
 php -S localhost:8080 -t public/
+
+mysql upsert
+> insert into amounts (pack_id, type, medium, number) values (34, 'JZSKART', 'CD', 7) on duplicate key update  number = values(number);
+(pack_id, type, medium) is a unique composite key
+get amount data for the pack
+select p.access_seq,a.type,a.medium,a.number from packs p join amounts a on p.id=a.pack_id where p.id=33;
