@@ -298,7 +298,7 @@ $app->post('/packs', function ($req, $resp, $args) {
     });
 $app->get('/packs/{uuid}', function ($req, $resp, $args) {
    $uuid=$args['uuid'];
-   $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, p.paper, p.created_at, p.updated_at, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, a.type, a.medium, a.number FROM packs p JOIN vendors v ON p.vendor_id=v.id join amounts a on p.id=a.pack_id WHERE p.UUID=:uuid");
+   $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, p.paper, p.created_at, p.updated_at, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, a.type, a.medium, a.number FROM packs p LEFT JOIN vendors v ON p.vendor_id=v.id join amounts a on p.id=a.pack_id WHERE p.UUID=:uuid");
    $query->bindParam("uuid", $uuid);
     try {
       $query->execute();
@@ -316,5 +316,5 @@ foreach (['uuid', 'vendor', 'paper', 'created_at', 'updated_at', 'access'] as $f
   foreach ($amounts as $amount) {
 $a['amount'][$amount['type']][$amount['medium']] = $amount['number'];
   };
-  return $resp->withJson(['data' => $a]);
+  return $resp->withJson(['data' => [$a]]);
 });
