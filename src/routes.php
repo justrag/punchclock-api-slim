@@ -310,11 +310,12 @@ $this->logger->info("query result: ".var_export($amounts, true));
   $first = $amounts[0];
 
 $a = ['amounts' => []];
+//$a = ['amounts' => new stdClass()];
 foreach (['uuid', 'vendor', 'paper', 'created_at', 'updated_at', 'access'] as $f) {
   $a[$f] = $first[$f];
 }
   foreach ($amounts as $amount) {
-$a['amounts'][$amount['type']][$amount['medium']] = $amount['number'];
+if ($amount['type']) {$a['amounts'][$amount['type']][$amount['medium']] = $amount['number'];}
   };
-  return $resp->withJson(['data' => [$a]]);
+  return $resp->withJson(['data' => $a]);
 });
