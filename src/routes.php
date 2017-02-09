@@ -305,17 +305,26 @@ $app->get('/packs/{uuid}', function ($req, $resp, $args) {
     } catch(PDOException $e) {
       return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
     }
-  $amounts = $query->fetchAll();
-$this->logger->info("query result: ".var_export($amounts, true));
-  $first = $amounts[0];
+  $packs_with_amounts = $query->fetchAll();
+$this->logger->info("query result: ".var_export($packs_with_amounts, true));
+  $first = $packs_with_amounts[0];
 
-$a = ['amounts' => []];
-//$a = ['amounts' => new stdClass()];
+$a = [];
 foreach (['uuid', 'vendor', 'paper', 'created_at', 'updated_at', 'access'] as $f) {
   $a[$f] = $first[$f];
 }
-  foreach ($amounts as $amount) {
+
+$amounts=array_filter($packs_with_amounts, function($a) {return $a['type'];});
+$a['amounts']=array_map(function($a) {
+  $dummy=[];
+  foreach (['type','medium','number'] as $f) {$dummy[$f]=$a[$f];}
+  return $dummy;
+}, $amounts);
+
+/*
+foreach ($amounts as $amount) {
 if ($amount['type']) {$a['amounts'][$amount['type']][$amount['medium']] = $amount['number'];}
-  };
+};
+*/
   return $resp->withJson(['data' => $a]);
 });
