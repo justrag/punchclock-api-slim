@@ -4,6 +4,9 @@ use Ramsey\Uuid\Uuid;
 use Firebase\JWT\JWT;
 use Tuupola\Base62;
 
+$types = ['zw','c','dzs','jzsmuz','jzskart'];
+$media = ['druk','cd','usb'];
+
 // Routes
 
 // get all vendors
@@ -296,7 +299,7 @@ $app->post('/packs', function ($req, $resp, $args) {
     return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'vendor_id' => $vendor_id, 'access' => date('Y')."EO/".sprintf("%05d", $access)]]);
   }
     });
-$app->get('/packs/{uuid}', function ($req, $resp, $args) {
+$app->get('/packs/{uuid}', function ($req, $resp, $args) use($types, $media) {
    $uuid=$args['uuid'];
    $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, p.paper, p.created_at, p.updated_at, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, a.type, a.medium, a.number FROM packs p LEFT JOIN vendors v ON p.vendor_id=v.id LEFT JOIN amounts a on p.id=a.pack_id WHERE p.UUID=:uuid");
    $query->bindParam("uuid", $uuid);
@@ -308,23 +311,65 @@ $app->get('/packs/{uuid}', function ($req, $resp, $args) {
   $packs_with_amounts = $query->fetchAll();
 $this->logger->info("query result: ".var_export($packs_with_amounts, true));
   $first = $packs_with_amounts[0];
-
 $a = [];
 foreach (['uuid', 'vendor', 'paper', 'created_at', 'updated_at', 'access'] as $f) {
   $a[$f] = $first[$f];
 }
-
+foreach ($types as $t) {
+  foreach ($media as $m) {
+    $a['amounts'][$t][$m] = 0;
+  }
+}
 $amounts=array_filter($packs_with_amounts, function($a) {return $a['type'];});
-$a['amounts']=array_map(function($a) {
-  $dummy=[];
-  foreach (['type','medium','number'] as $f) {$dummy[$f]=$a[$f];}
-  return $dummy;
-}, $amounts);
-
-/*
 foreach ($amounts as $amount) {
-if ($amount['type']) {$a['amounts'][$amount['type']][$amount['medium']] = $amount['number'];}
+  $a['amounts'][$amount['type']][$amount['medium']] = $amount['number'];
 };
-*/
   return $resp->withJson(['data' => $a]);
 });
+
+$app->post('/packs/{uuid}', function ($req, $resp, $args) use($types, $media) {
+  $uuid=$args['uuid'];
+  $query = $this->db->prepare("SELECT id FROM packs WHERE UUID=:uuid");
+  $query->bindValue("uuid", $uuid);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+    $pack_id = $query->fetchColumn();
+  $body = $req->getParsedBody();
+  $this->logger->info("/pack/".$uuid." POST route; reqbody: ".var_export($body, true));
+  $paper=$body['paper']; 
+  if (!empty($paper)) {$this->logger->info("Will update pack ".$uuid." with paper: ".$paper);}
+   $amounts=$body['amounts'];
+  if (!empty($amounts)) {
+  $this->logger->info("Will update pack ".$uuid." with amounts: ".var_export($amounts, true));
+  $this->db->beginTransaction();
+  foreach ($amounts as $type => $typeArray) {
+    if (!in_array($type, $types)) {
+          return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong type given!']]);
+        }
+    foreach ($typeArray as $medium => $givenNumber) {
+          if (!in_array($medium, $media)) {
+          return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong medium given!']]);
+        }
+          $number = filter_var($givenNumber, FILTER_SANITIZE_NUMBER_INT);
+        $this->logger->info("Constructing upsert query for type: ".$type.", medium: ".$medium.", number: ".$number);
+    // upsert into amounts table or delete if numer==0
+    $query = $this->db->prepare("INSERT INTO amounts (pack_id, type, medium, number) VALUES (:pack_id, :type, :medium, :number) ON DUPLICATE KEY UPDATE number=:number");
+    $query->bindParam("pack_id", $pack_id);
+    $query->bindParam("type", $type);
+    $query->bindParam("medium", $medium);
+    $query->bindParam("number", $number);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+  }
+}
+  $this->db->commit();
+}
+
+  return $this->response->withStatus(200)->withJson(['data' => ['amounts' => $amounts, 'paper' => $paper, 'uuid' => $uuid]]);
+ });
