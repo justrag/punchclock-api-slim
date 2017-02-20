@@ -299,7 +299,7 @@ $app->post('/packs', function ($req, $resp, $args) {
     return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'vendor_id' => $vendor_id, 'access' => date('Y')."EO/".sprintf("%05d", $access)]]);
   }
     });
-$app->get('/packs/{uuid}', function ($req, $resp, $args) use($types, $media) {
+$app->get('/packs/amount/{uuid}', function ($req, $resp, $args) use($types, $media) {
    $uuid=$args['uuid'];
    $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, p.paper, p.created_at, p.updated_at, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, a.type, a.medium, a.number FROM packs p LEFT JOIN vendors v ON p.vendor_id=v.id LEFT JOIN amounts a on p.id=a.pack_id WHERE p.UUID=:uuid");
    $query->bindParam("uuid", $uuid);
