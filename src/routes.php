@@ -233,6 +233,8 @@ $app->get('/packs', function ($req, $resp, $args) {
   $query->bindValue(':skip', $skip, PDO::PARAM_INT);
   $query->execute();
   $packs = $query->fetchAll();
+  foreach ($packs as $pack) {$pack['amounts'] = new stdClass();}
+  // FIXME: empty object?
   $total = $this->db->query('SELECT FOUND_ROWS();')->fetch(PDO::FETCH_COLUMN);
   return $resp->withJson(['limit' => $limit, 'skip' => $skip, 'total' => $total, 'data' => $packs]);
 });
