@@ -25,13 +25,13 @@ DROP TABLE IF EXISTS `amounts`;
 CREATE TABLE `amounts` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `pack_id` int(11) NOT NULL,
-  `type` varchar(10) COLLATE utf8_unicode_ci NOT NULL,
-  `medium` varchar(10) COLLATE utf8_unicode_ci NOT NULL,
+  `type` varchar(10) NOT NULL,
+  `medium` varchar(10) NOT NULL,
   `number` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `index2` (`pack_id`,`type`,`medium`),
   CONSTRAINT `pack_id` FOREIGN KEY (`pack_id`) REFERENCES `packs` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=457 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -40,8 +40,38 @@ CREATE TABLE `amounts` (
 
 LOCK TABLES `amounts` WRITE;
 /*!40000 ALTER TABLE `amounts` DISABLE KEYS */;
-INSERT INTO `amounts` VALUES (52,24,'zw','druk',0),(53,24,'zw','cd',2),(54,24,'zw','usb',0),(55,24,'c','druk',0),(56,24,'c','cd',2),(57,24,'c','usb',0),(58,24,'dzs','druk',0),(59,24,'dzs','cd',0),(60,24,'dzs','usb',0),(61,24,'jzsmuz','druk',0),(62,24,'jzsmuz','cd',0),(63,24,'jzsmuz','usb',0),(64,24,'jzskart','druk',0),(65,24,'jzskart','cd',0),(66,24,'jzskart','usb',0),(67,4,'zw','druk',3),(68,4,'zw','cd',1),(69,4,'zw','usb',2),(70,4,'c','druk',2),(71,4,'c','cd',1),(72,4,'c','usb',2),(73,4,'dzs','druk',1),(74,4,'dzs','cd',1),(75,4,'dzs','usb',2),(76,4,'jzsmuz','druk',2),(77,4,'jzsmuz','cd',1),(78,4,'jzsmuz','usb',2),(79,4,'jzskart','druk',3),(80,4,'jzskart','cd',1),(81,4,'jzskart','usb',2);
+INSERT INTO `amounts` VALUES (52,24,'zw','druk',0),(53,24,'zw','cd',2),(54,24,'zw','usb',0),(55,24,'c','druk',0),(56,24,'c','cd',2),(57,24,'c','usb',0),(58,24,'dzs','druk',0),(59,24,'dzs','cd',0),(60,24,'dzs','usb',0),(61,24,'jzsmuz','druk',0),(62,24,'jzsmuz','cd',2),(63,24,'jzsmuz','usb',0),(64,24,'jzskart','druk',0),(65,24,'jzskart','cd',0),(66,24,'jzskart','usb',0),(67,4,'zw','druk',11),(68,4,'zw','cd',1),(69,4,'zw','usb',2),(70,4,'c','druk',10),(71,4,'c','cd',1),(72,4,'c','usb',2),(73,4,'dzs','druk',1),(74,4,'dzs','cd',1),(75,4,'dzs','usb',2),(76,4,'jzsmuz','druk',2),(77,4,'jzsmuz','cd',1),(78,4,'jzsmuz','usb',2),(79,4,'jzskart','druk',3),(80,4,'jzskart','cd',1),(81,4,'jzskart','usb',2),(97,34,'zw','druk',27),(98,34,'zw','cd',0),(99,34,'zw','usb',0),(100,34,'c','druk',0),(101,34,'c','cd',4),(102,34,'c','usb',0),(103,34,'dzs','druk',3),(104,34,'dzs','cd',0),(105,34,'dzs','usb',0),(106,34,'jzsmuz','druk',0),(107,34,'jzsmuz','cd',0),(108,34,'jzsmuz','usb',0),(109,34,'jzskart','druk',0),(110,34,'jzskart','cd',0),(111,34,'jzskart','usb',0),(157,23,'zw','druk',4),(158,23,'zw','cd',0),(159,23,'zw','usb',4),(160,23,'c','druk',0),(161,23,'c','cd',0),(162,23,'c','usb',0),(163,23,'dzs','druk',1),(164,23,'dzs','cd',0),(165,23,'dzs','usb',0),(166,23,'jzsmuz','druk',1),(167,23,'jzsmuz','cd',5),(168,23,'jzsmuz','usb',0),(169,23,'jzskart','druk',1),(170,23,'jzskart','cd',0),(171,23,'jzskart','usb',0),(172,25,'zw','druk',1),(173,25,'zw','cd',0),(174,25,'zw','usb',0),(175,25,'c','druk',1),(176,25,'c','cd',0),(177,25,'c','usb',0),(178,25,'dzs','druk',3),(179,25,'dzs','cd',0),(180,25,'dzs','usb',0),(181,25,'jzsmuz','druk',0),(182,25,'jzsmuz','cd',1),(183,25,'jzsmuz','usb',0),(184,25,'jzskart','druk',1),(185,25,'jzskart','cd',1),(186,25,'jzskart','usb',0),(217,2,'zw','druk',0),(218,2,'zw','cd',0),(219,2,'zw','usb',0),(220,2,'c','druk',0),(221,2,'c','cd',0),(222,2,'c','usb',0),(223,2,'dzs','druk',0),(224,2,'dzs','cd',0),(225,2,'dzs','usb',0),(226,2,'jzsmuz','druk',0),(227,2,'jzsmuz','cd',5),(228,2,'jzsmuz','usb',0),(229,2,'jzskart','druk',0),(230,2,'jzskart','cd',0),(231,2,'jzskart','usb',0),(277,9,'zw','druk',0),(278,9,'zw','cd',1),(279,9,'zw','usb',0),(280,9,'c','druk',0),(281,9,'c','cd',1),(282,9,'c','usb',0),(283,9,'dzs','druk',0),(284,9,'dzs','cd',7),(285,9,'dzs','usb',4),(286,9,'jzsmuz','druk',0),(287,9,'jzsmuz','cd',9),(288,9,'jzsmuz','usb',1),(289,9,'jzskart','druk',0),(290,9,'jzskart','cd',0),(291,9,'jzskart','usb',0),(307,30,'zw','druk',0),(308,30,'zw','cd',0),(309,30,'zw','usb',0),(310,30,'c','druk',0),(311,30,'c','cd',8),(312,30,'c','usb',0),(313,30,'dzs','druk',0),(314,30,'dzs','cd',3),(315,30,'dzs','usb',0),(316,30,'jzsmuz','druk',0),(317,30,'jzsmuz','cd',0),(318,30,'jzsmuz','usb',0),(319,30,'jzskart','druk',0),(320,30,'jzskart','cd',0),(321,30,'jzskart','usb',0),(337,5,'zw','druk',0),(338,5,'zw','cd',0),(339,5,'zw','usb',0),(340,5,'c','druk',0),(341,5,'c','cd',0),(342,5,'c','usb',0),(343,5,'dzs','druk',0),(344,5,'dzs','cd',0),(345,5,'dzs','usb',0),(346,5,'jzsmuz','druk',2),(347,5,'jzsmuz','cd',0),(348,5,'jzsmuz','usb',0),(349,5,'jzskart','druk',0),(350,5,'jzskart','cd',0),(351,5,'jzskart','usb',0),(397,17,'zw','druk',0),(398,17,'zw','cd',0),(399,17,'zw','usb',0),(400,17,'c','druk',0),(401,17,'c','cd',0),(402,17,'c','usb',0),(403,17,'dzs','druk',0),(404,17,'dzs','cd',3),(405,17,'dzs','usb',0),(406,17,'jzsmuz','druk',0),(407,17,'jzsmuz','cd',0),(408,17,'jzsmuz','usb',0),(409,17,'jzskart','druk',0),(410,17,'jzskart','cd',0),(411,17,'jzskart','usb',0),(412,19,'zw','druk',0),(413,19,'zw','cd',0),(414,19,'zw','usb',0),(415,19,'c','druk',0),(416,19,'c','cd',0),(417,19,'c','usb',0),(418,19,'dzs','druk',0),(419,19,'dzs','cd',4),(420,19,'dzs','usb',0),(421,19,'jzsmuz','druk',0),(422,19,'jzsmuz','cd',0),(423,19,'jzsmuz','usb',0),(424,19,'jzskart','druk',0),(425,19,'jzskart','cd',0),(426,19,'jzskart','usb',0);
 /*!40000 ALTER TABLE `amounts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `books`
+--
+
+DROP TABLE IF EXISTS `books`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `books` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(255) NOT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `author` varchar(255) DEFAULT NULL,
+  `notes` varchar(255) DEFAULT NULL,
+  `pack_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uuid_UNIQUE` (`uuid`),
+  KEY `fk_books_1_idx` (`pack_id`),
+  CONSTRAINT `fk_books_1` FOREIGN KEY (`pack_id`) REFERENCES `packs` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `books`
+--
+
+LOCK TABLES `books` WRITE;
+/*!40000 ALTER TABLE `books` DISABLE KEYS */;
+/*!40000 ALTER TABLE `books` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -53,9 +83,9 @@ DROP TABLE IF EXISTS `packs`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `packs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `uuid` varchar(255) NOT NULL,
   `vendor_id` int(11) NOT NULL,
-  `paper` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `paper` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `access_seq` int(11) NOT NULL,
@@ -87,11 +117,11 @@ DROP TABLE IF EXISTS `users`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `login` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `email` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `uuid` varchar(255) NOT NULL,
+  `login` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_UNIQUE` (`login`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`)
@@ -117,10 +147,11 @@ DROP TABLE IF EXISTS `vendors`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `vendors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uuid` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `uuid` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `address` longtext,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`),
   UNIQUE KEY `name_UNIQUE` (`name`)
@@ -133,7 +164,7 @@ CREATE TABLE `vendors` (
 
 LOCK TABLES `vendors` WRITE;
 /*!40000 ALTER TABLE `vendors` DISABLE KEYS */;
-INSERT INTO `vendors` VALUES (3,'77b195c0-8283-478f-a545-ad34ce1f528e','eeeee','2016-12-29 19:38:15','2016-12-29 19:38:15'),(4,'84747e92-dc61-4c60-93c5-0a525a48d2f1','eeeeee','2016-12-29 19:44:04','2016-12-29 19:44:04'),(5,'e56862e4-10ea-4922-b23e-81985f53281d','qqqqqq','2016-12-29 19:49:06','2016-12-29 19:49:06'),(6,'9059dd68-d81f-4a36-b4d7-56c63143b4c2','rrrrrrrrr','2016-12-30 12:21:24','2016-12-30 12:21:24'),(7,'52fecb7a-2179-4ca9-b70b-6834f27de2d1','W121212','2016-12-30 12:22:51','2016-12-30 12:22:51'),(8,'1d44862e-f6e5-444d-8dea-2fa797237590','www','2016-12-30 12:27:25','2016-12-30 12:27:25'),(9,'3d72bdd4-9c9f-4ad1-9f09-2cd5780977eb','wwwww11','2016-12-30 12:29:54','2016-12-30 12:29:54'),(10,'e86eabb9-c7fc-4189-8ecf-250eebb908c6','133113','2016-12-30 12:30:40','2016-12-30 12:30:40'),(11,'f1a37ad1-637e-4611-b387-d622bbda62d6','qwqwqwqw','2016-12-30 12:33:47','2016-12-30 12:33:47'),(12,'6b80ab28-4336-402c-9082-f576d484dabe','311331wwerwe','2016-12-30 12:34:38','2016-12-30 12:34:38'),(13,'836fa89c-86fc-4f0e-93e5-ca95e8ef428a','werrwer','2016-12-30 12:42:37','2016-12-30 12:42:37'),(14,'52f7b4cf-5139-4a77-81c8-d89c6cea0942','qwe','2017-01-02 13:40:10','2017-01-02 13:40:10'),(15,'1ec7ebb4-851e-4b86-85ad-2e5f741ba68f','e','2017-01-02 13:57:10','2017-01-02 13:57:10'),(16,'b84f67cd-0f9b-4311-ae52-aee34860bde5','r','2017-01-02 13:58:05','2017-01-02 13:58:05'),(17,'208691b2-a5c3-42cb-9d93-9c2b46631ce6','cfgbxdfgd','2017-01-03 11:55:54','2017-01-03 11:55:54'),(18,'0e933e23-b135-49ac-bb82-806f952f05b4','sdfgsdfg','2017-01-03 11:56:47','2017-01-03 11:56:47'),(19,'b0f013ac-660d-4169-83c7-c99cb19381d2','ewweewwww','2017-01-04 12:22:09','2017-01-04 12:22:09'),(20,'5a4d699e-d49b-49e1-82c6-8b90a61e0c9b','rererere','2017-01-04 13:40:16','2017-01-04 13:40:16'),(21,'53cbf2fd-01a8-4ee3-beeb-bf6cec03203d','wewe','2017-01-10 12:54:33','2017-01-10 12:54:33'),(22,'97455571-db39-412b-8f07-76c7eaeb1081','qrqrqrqr','2017-02-10 12:23:40','2017-02-10 12:23:40');
+INSERT INTO `vendors` VALUES (3,'77b195c0-8283-478f-a545-ad34ce1f528e','eeeee','2016-12-29 19:38:15','2016-12-29 19:38:15',NULL),(4,'84747e92-dc61-4c60-93c5-0a525a48d2f1','eeeeee','2016-12-29 19:44:04','2016-12-29 19:44:04',NULL),(5,'e56862e4-10ea-4922-b23e-81985f53281d','qqqqqq','2016-12-29 19:49:06','2016-12-29 19:49:06',NULL),(6,'9059dd68-d81f-4a36-b4d7-56c63143b4c2','rrrrrrrrr','2016-12-30 12:21:24','2016-12-30 12:21:24',NULL),(7,'52fecb7a-2179-4ca9-b70b-6834f27de2d1','W121212','2016-12-30 12:22:51','2016-12-30 12:22:51',NULL),(8,'1d44862e-f6e5-444d-8dea-2fa797237590','www','2016-12-30 12:27:25','2016-12-30 12:27:25',NULL),(9,'3d72bdd4-9c9f-4ad1-9f09-2cd5780977eb','wwwww11','2016-12-30 12:29:54','2016-12-30 12:29:54',NULL),(10,'e86eabb9-c7fc-4189-8ecf-250eebb908c6','133113','2016-12-30 12:30:40','2016-12-30 12:30:40',NULL),(11,'f1a37ad1-637e-4611-b387-d622bbda62d6','qwqwqwqw','2016-12-30 12:33:47','2016-12-30 12:33:47',NULL),(12,'6b80ab28-4336-402c-9082-f576d484dabe','311331wwerwe','2016-12-30 12:34:38','2016-12-30 12:34:38',NULL),(13,'836fa89c-86fc-4f0e-93e5-ca95e8ef428a','werrwer','2016-12-30 12:42:37','2016-12-30 12:42:37',NULL),(14,'52f7b4cf-5139-4a77-81c8-d89c6cea0942','qwe','2017-01-02 13:40:10','2017-01-02 13:40:10',NULL),(15,'1ec7ebb4-851e-4b86-85ad-2e5f741ba68f','e','2017-01-02 13:57:10','2017-01-02 13:57:10',NULL),(16,'b84f67cd-0f9b-4311-ae52-aee34860bde5','r','2017-01-02 13:58:05','2017-01-02 13:58:05',NULL),(17,'208691b2-a5c3-42cb-9d93-9c2b46631ce6','cfgbxdfgd','2017-01-03 11:55:54','2017-01-03 11:55:54',NULL),(18,'0e933e23-b135-49ac-bb82-806f952f05b4','sdfgsdfg','2017-01-03 11:56:47','2017-01-03 11:56:47',NULL),(19,'b0f013ac-660d-4169-83c7-c99cb19381d2','ewweewwww','2017-01-04 12:22:09','2017-01-04 12:22:09',NULL),(20,'5a4d699e-d49b-49e1-82c6-8b90a61e0c9b','rererere','2017-01-04 13:40:16','2017-01-04 13:40:16',NULL),(21,'53cbf2fd-01a8-4ee3-beeb-bf6cec03203d','wewe','2017-01-10 12:54:33','2017-01-10 12:54:33',NULL),(22,'97455571-db39-412b-8f07-76c7eaeb1081','qrqrqrqr','2017-02-10 12:23:40','2017-02-10 12:23:40',NULL);
 /*!40000 ALTER TABLE `vendors` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -146,4 +177,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-02-21 11:08:12
+-- Dump completed on 2017-02-23 19:25:50

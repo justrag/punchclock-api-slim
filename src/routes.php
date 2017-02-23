@@ -329,6 +329,26 @@ foreach ($amounts as $amount) {
   return $resp->withJson(['data' => $a]);
 });
 
+$app->get('/packs/inventory/{uuid}', function ($req, $resp, $args) {
+   $uuid=$args['uuid'];
+   $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, v.address, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, b.uuid as book_uuid, b.title, b.author, b.notes FROM packs p LEFT JOIN vendors v ON p.vendor_id=v.id LEFT JOIN books b on b.pack_id=p.id WHERE p.UUID=:uuid");
+   $query->bindParam("uuid", $uuid);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+  $packs_with_books = $query->fetchAll();
+$this->logger->info("query result: ".var_export($packs_with_books, true));
+  $first = $packs_with_books[0];
+$pack = [];
+foreach (['uuid', 'vendor', 'access'] as $f) {
+  $pack[$f] = $first[$f];
+}
+$pack['books']=array_filter($packs_with_books, function($p) {return $p['book_uuid'];});
+  return $resp->withJson(['data' => $pack]);
+});
+
 $app->post('/packs/{uuid}', function ($req, $resp, $args) use($types, $media) {
   $uuid=$args['uuid'];
   $query = $this->db->prepare("SELECT id FROM packs WHERE UUID=:uuid");
