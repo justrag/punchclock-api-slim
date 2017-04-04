@@ -12,7 +12,8 @@ $container["JwtAuthentication"] = function ($c) {
 //        "secure" => false,
 //
         "path" => "/",
-        "passthrough" => ["/auth/", "/vendornames/"],
+//        "passthrough" => ["/auth/", "/vendornames/"],
+        "passthrough" => ["/auth/"],
         "secret" => getenv("JWT_SECRET"),
         "logger" => $c["logger"],
 //        "relaxed" => ["192.168.50.52"],

@@ -4,16 +4,201 @@ use Ramsey\Uuid\Uuid;
 use Firebase\JWT\JWT;
 use Tuupola\Base62;
 
-$types = ['zw','c','dzs','jzsmuz','jzskart'];
-$media = ['druk','cd','usb'];
-
 // Routes
 
-// get all vendors
-$app->get('/vendors', function ($req, $resp, $args) {
+/////////////////////////////
+// BEGIN AUTH STUFF
+/////////////////////////////
+
+/////
+// Create an account
+/////
+$app->post('/auth/create', function ($req, $resp, $args) {
+
+  $body = $req->getParsedBody();
+  $this->logger->info("/auth/create POST route; reqbody: ".var_export($body, true));
+
+  $login=$body['login'];
+  if (empty($login) || strlen($login) < 3 ) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
+  }
+  $password=$body['password'];
+  if (empty($password) || strlen($password) < 8 ) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
+  }
+  $email=$body['email'];
+  if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Email incorrect!"]]);
+  }
+  $name=$body['name'];
+  if (empty($name) || strlen($name) < 5 ) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Name's too short!"]]);
+  }
+  // Create password hash
+  $passwordHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => 12]);
+  if ($passwordHash === false) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password hash failed!"]]);
+  }
+
+  $uuid = Uuid::uuid4()->toString();
+  $query = $this->db->prepare("INSERT INTO users (uuid, login, password, email, name) VALUES (:uuid, :login, :password, :email, :name)");
+  $query->bindParam("uuid", $uuid);
+  $query->bindParam("login", $login);
+  $query->bindParam("password", $passwordHash);
+  $query->bindParam("email", $email);
+  $query->bindParam("name", $name);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    //an error raised by PDO - CHECKME: should it be 400 or 500 or...?
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+  return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'login' => $login, 'email' => $email, 'name' => $name]]);
+});
+
+/////
+// Login -> get JWT token
+/////
+$app->post('/auth/login', function ($req, $resp, $args) {
+  $body = $req->getParsedBody();
+  $this->logger->info("/auth/login POST route; reqbody: ".var_export($body, true));
+
+  $login=$body['login'];
+  if (empty($login) || strlen($login) < 3 ) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
+  }
+  $password=$body['password'];
+  if (empty($password) || strlen($password) < 8 ) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
+  }
+
+  $query = $this->db->prepare("SELECT uuid, password FROM users WHERE login=:login");
+  $query->bindValue(':login', $login, PDO::PARAM_STR);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+  //$passwordHash = $query->fetchColumn();
+  $row = $query->fetch();
+  $passwordHash = $row['password'];
+  $id=$row['uuid'];
+
+  if (password_verify($password, $passwordHash) === false) {
+    $this->logger->info("password_verify failed: login ".$login." password ".$password);
+    return $this->response->withStatus(401)->withJson(['error' => ['message' => "Incorrect login or password"]]);
+  }
+
+  $now = new DateTime();
+  $future = new DateTime("now +9 hours");
+  $server = $req->getServerParams();
+
+  $jti = Base62::encode(random_bytes(16));
+
+  $payload = [
+    "iat" => $now->getTimeStamp(),
+    "exp" => $future->getTimeStamp(),
+    "jti" => $jti,
+    "iss" => $server["HTTP_HOST"],
+  //        "sub" => $server["PHP_AUTH_USER"],
+  //        "scope" => $scopes
+    "data" => [
+      "userId" => "dafdasfdasdf",
+      "userLogin" => $login,
+    ]
+  ];
+
+  $secret = getenv("JWT_SECRET");
+  $token = JWT::encode($payload, $secret, "HS256");
+  $data["status"] = "ok";
+  $data["id"] = $id;
+  $data["login"] = $login;
+  $data["token"] = $token;
+
+  return $this->response->withJson(['data' => $data]);
+});
+
+/////////////////////////////
+// END OF AUTH STUFF
+/////////////////////////////
+
+
+/////
+// Get inventory for a pack
+/////
+$app->get('/incidents/{date:2[0-9][0-9][0-9][01][0-9][0123][0-9]}', function ($req, $resp, $args) {
+   $date=$args['date'];
+   
+   $query = $this->db->prepare("SELECT date, enter, exit, shiftlength FROM incidents WHERE date=:date");
+   $query->bindParam("date", $date);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+  $incidents = $query->fetchAll();
+$this->logger->info("query result: ".var_export($incidents, true));
+  return $resp->withJson(['data' => $incidents]);
+});
+
+/////
+// Update a pack
+/////
+$app->post('/packs/{uuid}', function ($req, $resp, $args) use($types, $media) {
+  $uuid=$args['uuid'];
+  $query = $this->db->prepare("SELECT id FROM packs WHERE UUID=:uuid");
+  $query->bindValue("uuid", $uuid);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+    $pack_id = $query->fetchColumn();
+  $body = $req->getParsedBody();
+  $this->logger->info("/pack/".$uuid." POST route; reqbody: ".var_export($body, true));
+  $paper=$body['paper']; 
+  if (!empty($paper)) {$this->logger->info("Will update pack ".$uuid." with paper: ".$paper);}
+   $amounts=$body['amounts'];
+  if (!empty($amounts)) {
+  $this->logger->info("Will update pack ".$uuid." with amounts: ".var_export($amounts, true));
+  $this->db->beginTransaction();
+  foreach ($amounts as $type => $typeArray) {
+    if (!in_array($type, $types)) {
+          return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong type given!']]);
+        }
+    foreach ($typeArray as $medium => $givenNumber) {
+          if (!in_array($medium, $media)) {
+          return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong medium given!']]);
+        }
+          $number = filter_var($givenNumber, FILTER_SANITIZE_NUMBER_INT);
+        $this->logger->info("Constructing upsert query for type: ".$type.", medium: ".$medium.", number: ".$number);
+    // upsert into amounts table or delete if numer==0
+    $query = $this->db->prepare("INSERT INTO amounts (pack_id, type, medium, number) VALUES (:pack_id, :type, :medium, :number) ON DUPLICATE KEY UPDATE number=:number");
+    $query->bindParam("pack_id", $pack_id);
+    $query->bindParam("type", $type);
+    $query->bindParam("medium", $medium);
+    $query->bindParam("number", $number);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+  }
+}
+  $this->db->commit();
+}
+  return $this->response->withStatus(200)->withJson(['data' => ['amounts' => $amounts, 'paper' => $paper, 'uuid' => $uuid]]);
+ });
+
+
+/////
+// Get incidents
+// Specified $date +/- two weeks
+/////
+$app->get('/incidents', function ($req, $resp, $args) {
   $settings = $this->get('settings')['db'];
 
-  $limit = filter_var($req->getQueryParam('$limit'), FILTER_VALIDATE_INT, ['options' => [
+  $date = filter_var($req->getQueryParam('$date'), FILTER_VALIDATE_INT, ['options' => [
         'default' => $settings['limit'], // value to return if the filter fails
         'min_range' => 1,
         'max_range' => $settings['limit']
@@ -46,6 +231,9 @@ $app->get('/vendors', function ($req, $resp, $args) {
   return $resp->withJson(['limit' => $limit, 'total' => $total, 'data' => $vendors]);
 });
 
+/////
+// Post a vendor
+/////
 $app->post('/vendors', function ($req, $resp, $args) {
   $body = $req->getParsedBody();
   $this->logger->info("/vendors POST route; reqbody: ".var_export($body, true));
@@ -68,107 +256,10 @@ $app->post('/vendors', function ($req, $resp, $args) {
   }
     });
 
-$app->post('/auth/create', function ($req, $resp, $args) {
-  $body = $req->getParsedBody();
-  $this->logger->info("/auth/create POST route; reqbody: ".var_export($body, true));
 
-$login=$body['login'];
-if (empty($login) || strlen($login) < 3 ) {
-  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
-}
-$password=$body['password'];
-if (empty($password) || strlen($password) < 8 ) {
-  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
-}
-$email=$body['email'];
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Email incorrect!"]]);
-}
-$name=$body['name'];
-if (empty($name) || strlen($name) < 5 ) {
-  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Name's too short!"]]);
-}
-// Create password hash
-$passwordHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => 12]);
-if ($passwordHash === false) {
-    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password hash failed!"]]);
-}
-
-    $uuid = Uuid::uuid4()->toString();
-    $query = $this->db->prepare("INSERT INTO users (uuid, login, password, email, name) VALUES (:uuid, :login, :password, :email, :name)");
-    $query->bindParam("uuid", $uuid);
-    $query->bindParam("login", $login);
-    $query->bindParam("password", $passwordHash);
-    $query->bindParam("email", $email);
-    $query->bindParam("name", $name);
-    try {
-      $query->execute();
-    } catch(PDOException $e) {
-      //an error raised by PDO - CHECKME: should it be 400 or 500 or...?
-      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
-    }
-    return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'login' => $login, 'email' => $email, 'name' => $name]]);
-    });
-
-$app->post('/auth/login', function ($req, $resp, $args) {
-  $body = $req->getParsedBody();
-  $this->logger->info("/auth/login POST route; reqbody: ".var_export($body, true));
-
-$login=$body['login'];
-if (empty($login) || strlen($login) < 3 ) {
-  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
-}
-$password=$body['password'];
-if (empty($password) || strlen($password) < 8 ) {
-  return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
-}
-    $query = $this->db->prepare("SELECT uuid, password FROM users WHERE login=:login");
-    $query->bindValue(':login', $login, PDO::PARAM_STR);
-    try {
-      $query->execute();
-    } catch(PDOException $e) {
-      return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
-    }
-//$passwordHash = $query->fetchColumn();
-$row = $query->fetch();
-$passwordHash = $row['password'];
-$id=$row['uuid'];
-
-if (password_verify($password, $passwordHash) === false) {
-  $this->logger->info("password_verify failed: login ".$login." password ".$password);
-  return $this->response->withStatus(401)->withJson(['error' => ['message' => "Incorrect login or password"]]);
-}
-
-    $now = new DateTime();
-    $future = new DateTime("now +9 hours");
-    $server = $req->getServerParams();
-
-    $jti = Base62::encode(random_bytes(16));
-
-    $payload = [
-        "iat" => $now->getTimeStamp(),
-        "exp" => $future->getTimeStamp(),
-        "jti" => $jti,
-        "iss" => $server["HTTP_HOST"],
-//        "sub" => $server["PHP_AUTH_USER"],
-//        "scope" => $scopes
-        "data" => [
-          "userId" => "dafdasfdasdf",
-          "userLogin" => $login,
-        ]
-    ];
-
-    $secret = getenv("JWT_SECRET");
-    $token = JWT::encode($payload, $secret, "HS256");
-    $data["status"] = "ok";
-    $data["id"] = $id;
-    $data["login"] = $login;
-    $data["token"] = $token;
-
-    return $this->response->withJson(['data' => $data]);
-});
-
-
+/////
+// Find vendors by name (for autocomplete)
+/////
 $app->get('/vendornames/{search}', function ($req, $resp, $args) {
   $search = filter_var($req->getAttribute('search'), FILTER_SANITIZE_STRING);
   $query = $this->db->prepare("SELECT name FROM vendors WHERE name LIKE :search ORDER BY name LIMIT 10");
@@ -178,6 +269,9 @@ $app->get('/vendornames/{search}', function ($req, $resp, $args) {
   return $resp->withJson(['vendornames' => $vendornames]);
 });
 
+/////
+// Get packs
+/////
 $app->get('/packs', function ($req, $resp, $args) {
   $settings = $this->get('settings')['db'];
 
@@ -239,6 +333,9 @@ $app->get('/packs', function ($req, $resp, $args) {
   return $resp->withJson(['limit' => $limit, 'skip' => $skip, 'total' => $total, 'data' => $packs]);
 });
 
+/////
+// Post a pack
+/////
 $app->post('/packs', function ($req, $resp, $args) {
   $body = $req->getParsedBody();
   $this->logger->info("/packs POST route; reqbody: ".var_export($body, true));
@@ -301,6 +398,10 @@ $app->post('/packs', function ($req, $resp, $args) {
     return $this->response->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'vendor_id' => $vendor_id, 'access' => date('Y')."EO/".sprintf("%05d", $access)]]);
   }
     });
+
+/////
+// Get amounts for a pack
+/////
 $app->get('/packs/amount/{uuid}', function ($req, $resp, $args) use($types, $media) {
    $uuid=$args['uuid'];
    $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, p.paper, p.created_at, p.updated_at, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, a.type, a.medium, a.number FROM packs p LEFT JOIN vendors v ON p.vendor_id=v.id LEFT JOIN amounts a on p.id=a.pack_id WHERE p.UUID=:uuid");
@@ -329,69 +430,3 @@ foreach ($amounts as $amount) {
   return $resp->withJson(['data' => $a]);
 });
 
-$app->get('/packs/inventory/{uuid}', function ($req, $resp, $args) {
-   $uuid=$args['uuid'];
-   $query = $this->db->prepare("SELECT p.uuid, v.name as vendor, v.address, concat(p.access_year,'EO/',lpad(p.access_seq,5,0)) as access, b.uuid as book_uuid, b.title, b.author, b.notes FROM packs p LEFT JOIN vendors v ON p.vendor_id=v.id LEFT JOIN books b on b.pack_id=p.id WHERE p.UUID=:uuid");
-   $query->bindParam("uuid", $uuid);
-    try {
-      $query->execute();
-    } catch(PDOException $e) {
-      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
-    }
-  $packs_with_books = $query->fetchAll();
-$this->logger->info("query result: ".var_export($packs_with_books, true));
-  $first = $packs_with_books[0];
-$pack = [];
-foreach (['uuid', 'vendor', 'access'] as $f) {
-  $pack[$f] = $first[$f];
-}
-$pack['books']=array_filter($packs_with_books, function($p) {return $p['book_uuid'];});
-  return $resp->withJson(['data' => $pack]);
-});
-
-$app->post('/packs/{uuid}', function ($req, $resp, $args) use($types, $media) {
-  $uuid=$args['uuid'];
-  $query = $this->db->prepare("SELECT id FROM packs WHERE UUID=:uuid");
-  $query->bindValue("uuid", $uuid);
-  try {
-    $query->execute();
-  } catch(PDOException $e) {
-    return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
-  }
-    $pack_id = $query->fetchColumn();
-  $body = $req->getParsedBody();
-  $this->logger->info("/pack/".$uuid." POST route; reqbody: ".var_export($body, true));
-  $paper=$body['paper']; 
-  if (!empty($paper)) {$this->logger->info("Will update pack ".$uuid." with paper: ".$paper);}
-   $amounts=$body['amounts'];
-  if (!empty($amounts)) {
-  $this->logger->info("Will update pack ".$uuid." with amounts: ".var_export($amounts, true));
-  $this->db->beginTransaction();
-  foreach ($amounts as $type => $typeArray) {
-    if (!in_array($type, $types)) {
-          return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong type given!']]);
-        }
-    foreach ($typeArray as $medium => $givenNumber) {
-          if (!in_array($medium, $media)) {
-          return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong medium given!']]);
-        }
-          $number = filter_var($givenNumber, FILTER_SANITIZE_NUMBER_INT);
-        $this->logger->info("Constructing upsert query for type: ".$type.", medium: ".$medium.", number: ".$number);
-    // upsert into amounts table or delete if numer==0
-    $query = $this->db->prepare("INSERT INTO amounts (pack_id, type, medium, number) VALUES (:pack_id, :type, :medium, :number) ON DUPLICATE KEY UPDATE number=:number");
-    $query->bindParam("pack_id", $pack_id);
-    $query->bindParam("type", $type);
-    $query->bindParam("medium", $medium);
-    $query->bindParam("number", $number);
-    try {
-      $query->execute();
-    } catch(PDOException $e) {
-      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
-    }
-  }
-}
-  $this->db->commit();
-}
-
-  return $this->response->withStatus(200)->withJson(['data' => ['amounts' => $amounts, 'paper' => $paper, 'uuid' => $uuid]]);
- });

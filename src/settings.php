@@ -20,7 +20,7 @@ return [
 
         // Monolog settings
         'logger' => [
-            'name' => 'RejestrAPI',
+            'name' => 'PunchclockAPI',
             'level' => \Monolog\Logger::DEBUG,
         ],
     ],
