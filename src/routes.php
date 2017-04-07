@@ -72,7 +72,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
     return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
   }
 
-  $query = $this->db->prepare("SELECT uuid, password FROM users WHERE login=:login");
+  $query = $this->db->prepare("SELECT id, uuid, password FROM users WHERE login=:login");
   $query->bindValue(':login', $login, PDO::PARAM_STR);
   try {
     $query->execute();
@@ -82,7 +82,8 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   //$passwordHash = $query->fetchColumn();
   $row = $query->fetch();
   $passwordHash = $row['password'];
-  $id=$row['uuid'];
+  $user_id=$row['id'];
+  //  $user_uuid=$row['uuid'];
 
   if (password_verify($password, $passwordHash) === false) {
     $this->logger->info("password_verify failed: login ".$login." password ".$password);
@@ -90,7 +91,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   }
 
   $now = new DateTime();
-  $future = new DateTime("now +9 hours");
+  $future = new DateTime("now +12 hours");
   $server = $req->getServerParams();
 
   $jti = Base62::encode(random_bytes(16));
@@ -103,7 +104,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   //        "sub" => $server["PHP_AUTH_USER"],
   //        "scope" => $scopes
     "data" => [
-      "userId" => "dafdasfdasdf",
+      "userId" => $user_id,
       "userLogin" => $login,
     ]
   ];
@@ -111,7 +112,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   $secret = getenv("JWT_SECRET");
   $token = JWT::encode($payload, $secret, "HS256");
   $data["status"] = "ok";
-  $data["id"] = $id;
+  //$data["id"] = $id;
   $data["login"] = $login;
   $data["token"] = $token;
 
@@ -122,14 +123,23 @@ $app->post('/auth/login', function ($req, $resp, $args) {
 // END OF AUTH STUFF
 /////////////////////////////
 
+$app->get('/bulba', function ($req, $resp, $args) {
+    $this->logger->info("BULBA route");
+    $token = $req->getAttribute("token");
+    $userLogin = $token->data->userLogin;
+    $this->logger->info("JWT token: ".var_export($token, true));
+    $this->logger->info("userlogin from JWT token: ".var_export($userLogin, true));
+    return $resp->withJson(['status' => 'ok']);
+});
 
 /////
-// Get inventory for a pack
+// Get an incident
 /////
-$app->get('/incidents/{date:2[0-9][0-9][0-9][01][0-9][0123][0-9]}', function ($req, $resp, $args) {
-   $date=$args['date'];
-   
-   $query = $this->db->prepare("SELECT date, enter, exit, shiftlength FROM incidents WHERE date=:date");
+$app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
+    $this->logger->info("JWT token: ".var_export($req->getAttribute("token"), true));
+
+   $date = date_create_from_format('!Y-m-d', $args['date'])->format('Y-m-d');
+   $query = $this->db->prepare("SELECT i.date, i.enter, i.exit, i.shiftlength FROM incidents i WHERE i.date=:date");
    $query->bindParam("date", $date);
     try {
       $query->execute();
@@ -137,9 +147,63 @@ $app->get('/incidents/{date:2[0-9][0-9][0-9][01][0-9][0123][0-9]}', function ($r
       return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
     }
   $incidents = $query->fetchAll();
-$this->logger->info("query result: ".var_export($incidents, true));
+  $this->logger->info("query result: ".var_export($incidents, true));
   return $resp->withJson(['data' => $incidents]);
 });
+
+/////
+// Post an incident
+/////
+$app->post('/incidents', function ($req, $resp, $args) {
+  $body = $req->getParsedBody();
+  $this->logger->info("/vendors POST route; reqbody: ".var_export($body, true));
+  $this->logger->info("userLogin from JWT token: ".var_export($req->getAttribute("token")->data->userLogin, true));
+  $user_id=$req->getAttribute("token")->data->userId;
+  $date=$body['date'];
+  $enter=$body['enter'];
+  $shiftlength=$body['shiftlength'];
+  if (empty($date) || empty($enter) || empty($shiftlength)) {
+    // no name given - problem!!!
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'No complete set of params (date, enter, shiftlength) specified!']]);
+  }
+  $parsedDate = date_create_from_format('!Y-m-d', $date);
+  if (!$parsedDate) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong _date_ format - should be _YYYY-MM-DD_!']]);
+  }
+  $startDate = date_create_from_format('!Y-m-d', '2001-01-01');
+  $endDate = date_create(); // "now"
+  if ($parsedDate < $startDate || $parsedDate > $endDate) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => '_date_ out of range (2001-01-01 -> today)!']]);
+  }
+  $insertDate=$parsedDate->format('Y-m-d');
+  $this->logger->info("insertDate: ".var_export($insertDate, true));
+
+  $parsedEnter = date_create_from_format('H:i', $enter);
+  if (!$parsedEnter) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong _enter_ format - should be _HH:MM_!']]);
+  }
+  $insertEnter = $parsedEnter->format('H:i');
+  $parsedShiftlength = filter_var($shiftlength, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]);
+  if (!$parsedShiftlength) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Wrong _shiftlength_ - should be 1<=integer<=12']]);
+  }
+
+    $query = $this->db->prepare("INSERT INTO incidents (user_id, date, enter, shiftlength) VALUES (:user_id, :date, :enter, :shiftlength)");
+    $query->bindParam("user_id", $user_id);
+    $query->bindParam("date", $insertDate);
+    $query->bindParam("enter", $insertEnter);
+    $query->bindParam("shiftlength", $parsedShiftlength);
+    try {
+      $query->execute();
+    } catch(PDOException $e) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+    }
+    $incident_id = $this->db->lastInsertId();
+    return $this->response->withStatus(201)->withJson(['data' => ['id' => $incident_id, 'user_id' => $user_id, 'date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $parsedShiftlength]]);
+    });
+
+
+/*
 
 /////
 // Update a pack
@@ -430,3 +494,4 @@ foreach ($amounts as $amount) {
   return $resp->withJson(['data' => $a]);
 });
 
+*/

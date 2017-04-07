@@ -6,9 +6,7 @@
     "license": "",
     "authors": [
         {
-            "name": "Just RAG",
-            "email": "",
-            "homepage": ""
+            "name": "Just RAG"
         }
     ],
     "require": {

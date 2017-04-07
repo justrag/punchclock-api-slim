@@ -1,10 +1,10 @@
 #!/bin/bash
 mysql -u root -p <<EOF
-drop database IF EXISTS rejestrtest;
-create database rejestrtest;
-drop user if exists 'rejestrtest'@'localhost';
-CREATE USER 'rejestrtest'@'localhost' IDENTIFIED BY 'Ux@#7Y6q';
-GRANT ALL PRIVILEGES ON rejestrtest.* TO 'rejestrtest'@'localhost';
-use rejestrtest;
+drop database IF EXISTS punchclocktest;
+create database punchclocktest;
+drop user if exists 'punchclocktest'@'localhost';
+CREATE USER 'punchclocktest'@'localhost' IDENTIFIED BY 'Ux@#7Y6q';
+GRANT ALL PRIVILEGES ON punchclocktest.* TO 'punchclocktest'@'localhost';
+use punchclocktest;
 source SCHEMA.SQL;
 EOF
