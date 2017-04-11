@@ -1,2 +1,2 @@
 #!/bin/bash
-mysqldump --single-transaction -u root -p rejestrtest > SCHEMA.SQL
+mysqldump --single-transaction -u root -p punchclocktest > SCHEMA_BULBA.SQL

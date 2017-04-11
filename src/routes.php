@@ -119,6 +119,107 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   return $this->response->withJson(['data' => $data]);
 });
 
+/////
+// Request for resetting the password -> generate 'reset password' token
+/////
+$app->post('/auth/forgot-password', function ($req, $resp, $args) {
+  $body = $req->getParsedBody();
+  $email=$body['email'];
+  $query = $this->db->prepare("SELECT id, email FROM users WHERE email=:email");
+  $query->bindValue(':email', $email, PDO::PARAM_STR);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+  $row = $query->fetch();
+  if (!$row) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'There seems to be no user with this email.']]);
+  }
+  // all cleaned up - from the database
+  $email = $row['email'];
+  $user_id=$row['id'];
+
+  $token = bin2hex(random_bytes(48));
+  $expire = time() + 60*60; // timestamp (in seconds) + 1 hr
+
+  $query = $this->db->prepare("UPDATE users SET rtoken=:rtoken, rtokenexpire=:rtokenexpire WHERE id=:user_id");
+  $query->bindValue(':rtoken', $token, PDO::PARAM_STR);
+  $query->bindValue(':rtokenexpire', $expire, PDO::PARAM_INT);
+  $query->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+
+  $mailText = 'You are receiving this because you (or someone else) have requested the reset of the password for your account.'.PHP_EOL.PHP_EOL
+            .'Please click on the following link, or paste this into your browser to complete the process:'.PHP_EOL.PHP_EOL
+            .'http://'.$req->getUri()->getHost().'/reset-password/'.$token.PHP_EOL.PHP_EOL
+            .'If you did not request this, please ignore this email and your password will remain unchanged.';
+  $message = Swift_Message::newInstance('Reset Password')
+                ->setFrom(array('reset@odbijsie.pl' => 'Reset Password Request'))
+                ->setTo(array($email => 'Punchclock User'))
+                ->setBody($mailText);
+  if ($this->mailer->send($message)) {
+    return $this->response->withStatus(200)->withJson(['data' => ['message' => 'Please check your email for the link to reset your password.']]);
+  } else {
+    return $this->response->withStatus(500)->withJson(['data' => ['message' => 'Problem sending email!.']]);
+  }
+});
+
+/////
+// Password reset route (change password using token)
+/////
+$app->post('/auth/reset-password/{token}', function ($req, $resp, $args) {
+  $query = $this->db->prepare("SELECT id, email FROM users WHERE rtoken=:rtoken AND rtokenexpire<:rtokenexpire");
+  $query->bindValue(':rtoken', $args['token'], PDO::PARAM_STR);
+  $query->bindValue(':rtokenexpire', time(), PDO::PARAM_INT);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+  $row = $query->fetch();
+  if (!$row) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => 'Your token has expired. Please attempt to reset your password again.']]);
+  }
+  // all cleaned up - from the database
+  $user_id=$row['id'];
+  $email=$row['email'];
+
+  $body = $req->getParsedBody();
+  $password=$body['password'];
+  if (empty($password) || strlen($password) < 8 ) {
+    return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
+  }
+  $passwordHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => 12]);
+  if ($passwordHash === false) {
+      return $this->response->withStatus(400)->withJson(['error' => ['message' => "Password hash failed!"]]);
+  }
+
+  $query = $this->db->prepare("UPDATE users SET rtoken=NULL,rtokenexpire=NULL,password=:password WHERE id=:user_id");
+  $query->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+  $query->bindValue(':password', $passwordHash, PDO::PARAM_STR);
+  try {
+    $query->execute();
+  } catch(PDOException $e) {
+    return $this->response->withStatus(500)->withJson(['error' => ['message' => $e->getMessage(),'code' => $e->getCode()]]);
+  }
+        $mailText='You are receiving this email because you changed your password.'.PHP_EOL.PHP_EOL
+          .'If you did not request this change, please contact us immediately.';
+  $message = Swift_Message::newInstance('Password Changed')
+                ->setFrom(array('reset@odbijsie.pl' => 'Reset Password Confirmation'))
+                ->setTo(array($email => 'Punchclock User'))
+                ->setBody($mailText);
+  if ($this->mailer->send($message)) {
+    return $this->response->withStatus(200)->withJson(['data' => ['message' => 'Password changed successfully. Please login with your new password.']]);
+  } else {
+    return $this->response->withStatus(500)->withJson(['data' => ['message' => 'Problem sending email!.']]);
+  }
+
+});
+
 /////////////////////////////
 // END OF AUTH STUFF
 /////////////////////////////

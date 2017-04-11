@@ -36,3 +36,9 @@ $container['db'] = function ($c) {
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     return $pdo;
 };
+
+$container['mailer'] = function ($c) {
+    $transport = Swift_MailTransport::newInstance();
+    $mailer = Swift_Mailer::newInstance($transport);
+    return $mailer;
+};
