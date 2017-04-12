@@ -8,7 +8,7 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\NullHandler;
 use Monolog\Formatter\LineFormatter;
 
-$container["logger"] = function ($c) {
+$container['logger'] = function ($c) {
     $settings = $c->get('settings')['logger'];
     $logger = new Logger($settings['name']);
 
@@ -29,11 +29,11 @@ $container["logger"] = function ($c) {
 
 // PDO database library 
 $container['db'] = function ($c) {
-    $settings = $c->get('settings')['db'];
-    $pdo = new PDO($settings['driver'] . ":host=" . $settings['host'] . ";dbname=" . $settings['database'],
-        $settings['username'], $settings['password']);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+  $settings = $c->get('settings')['db'];
+  $pdo = new PDO($settings['driver'] . ":host=" . $settings['host'] . ";dbname=" . $settings['database'],
+      $settings['username'], $settings['password']);
+  $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+  $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     return $pdo;
 };
 
