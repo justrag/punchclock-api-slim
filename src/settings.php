@@ -23,5 +23,12 @@ return [
             'name' => 'PunchclockAPI',
             'level' => \Monolog\Logger::DEBUG,
         ],
+
+        'mail' => [
+          'login' => getenv('MAIL_LOGIN'),
+          'password' => getenv('MAIL_PASSWORD'),
+          'host' => getenv('MAIL_HOST'),
+          'port' => getenv('MAIL_PORT')
+        ],
     ],
 ];

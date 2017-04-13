@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: punchclocktest
 -- ------------------------------------------------------
--- Server version	5.7.17-0ubuntu0.16.04.1
+-- Server version	5.7.17-0ubuntu0.16.04.2
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -33,7 +33,7 @@ CREATE TABLE `incidents` (
   UNIQUE KEY `index2` (`date`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,6 @@ CREATE TABLE `incidents` (
 
 LOCK TABLES `incidents` WRITE;
 /*!40000 ALTER TABLE `incidents` DISABLE KEYS */;
-INSERT INTO `incidents` VALUES (1,1,'2017-04-06','08:05:00',NULL,8);
 /*!40000 ALTER TABLE `incidents` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -60,6 +59,8 @@ CREATE TABLE `users` (
   `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `email` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `rtoken` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `rtokenexpire` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_UNIQUE` (`login`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`)
@@ -72,7 +73,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'fe231c6f-3c39-49a0-8adb-2fcfb24e8844','punchclocktest','$2y$12$NfzYTsfy8lJHrasVOARWA.j5enzCKrk4QvgCielOcowLKqGRhWsne','punchclocktest@example.com','punchclock Test');
+INSERT INTO `users` VALUES (1,'fe231c6f-3c39-49a0-8adb-2fcfb24e8844','punchclocktest','$2y$12$9kqPs/OY1IEC982rPkmmF.oYaiPswFUC7SOXViXfq1IMTFl8iuwzG','xxx@xxxxxxxxx','punchclock Test',NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -85,4 +86,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-04-11 14:49:24
+-- Dump completed on 2017-04-13 14:16:08

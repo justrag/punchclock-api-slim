@@ -11,7 +11,7 @@ function executeSQL($container, $response, $sql, ...$args) {
     $logger = $container['logger'];
     $query = $db->prepare($sql);
     foreach ($args as $arg) {
-        $query->bindValue($arg[0], arg[1], arg[2]);
+        $query->bindValue($arg[0], $arg[1], $arg[2]);
     // like, $query->bindValue(':email', $email, PDO::PARAM_STR);
       }
     try {
@@ -170,7 +170,8 @@ $app->post('/auth/forgot-password', function ($req, $resp, $args) {
 // Password reset route (change password using token)
 /////
 $app->post('/auth/reset-password/{token}', function ($req, $resp, $args) {
-  $query = executeSQL($this, $resp, "SELECT id, email FROM users WHERE rtoken=:rtoken AND rtokenexpire<:rtokenexpire",
+      $this->logger->info("time: ".time());
+  $query = executeSQL($this, $resp, "SELECT id, email FROM users WHERE rtoken=:rtoken AND rtokenexpire>:rtokenexpire",
     ["rtoken", $args['token'], PDO::PARAM_STR],
     ["rtokenexpire", time(), PDO::PARAM_INT]
   );

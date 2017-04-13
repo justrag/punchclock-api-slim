@@ -38,6 +38,13 @@ $container['db'] = function ($c) {
 };
 
 $container['mailer'] = function ($c) {
+  $settings = $c->get('settings')['mail'];
+  /* For sending by SMTP
+  $transport = Swift_SmtpTransport::newInstance($settings['host'], $settings['port'], 'ssl')
+  ->setUsername($settings['login'])
+  ->setPassword($settings['password']);
+*/
+//For default sendmail-like testing (local-only postfix installed)
     $transport = Swift_MailTransport::newInstance();
     $mailer = Swift_Mailer::newInstance($transport);
     return $mailer;
