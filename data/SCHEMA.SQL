@@ -30,10 +30,10 @@ CREATE TABLE `incidents` (
   `exit` time DEFAULT NULL,
   `shiftlength` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `index2` (`date`),
+  UNIQUE KEY `index2` (`user_id`,`date`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,6 +42,7 @@ CREATE TABLE `incidents` (
 
 LOCK TABLES `incidents` WRITE;
 /*!40000 ALTER TABLE `incidents` DISABLE KEYS */;
+INSERT INTO `incidents` VALUES (1,1,'2017-04-17','06:59:00',NULL,8);
 /*!40000 ALTER TABLE `incidents` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -64,7 +65,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_UNIQUE` (`login`),
   UNIQUE KEY `uuid_UNIQUE` (`uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -73,7 +74,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'fe231c6f-3c39-49a0-8adb-2fcfb24e8844','punchclocktest','$2y$12$9kqPs/OY1IEC982rPkmmF.oYaiPswFUC7SOXViXfq1IMTFl8iuwzG','xxx@xxxxxxxxx','punchclock Test',NULL,NULL);
+INSERT INTO `users` VALUES (1,'fe231c6f-3c39-49a0-8adb-2fcfb24e8844','punchclocktest','$2y$12$9kqPs/OY1IEC982rPkmmF.oYaiPswFUC7SOXViXfq1IMTFl8iuwzG','xxx@xxxxxxxxx','punchclock Test',NULL,NULL),(2,'960df861-e292-442a-b6ba-bf543eb0266b','zzzzzzzzzz','$2y$12$6MnsDoxRrKrwtLOvUznlY.U69C02IzzuDzrN9O6iPuHy51XFLumpK','rag@bjws223.bj.uj.edu.pl','dfgdgfdagdfgadgagdagdgfadga',NULL,NULL),(3,'4007ad22-6e65-428a-bdbc-9e8184511212','lalalala','$2y$12$rjv3blZvksL3UDTdcVAfcutunFkVZNRxU3OY8XIPUKg8MdSXtbM3y','rag@bjws223.bj.uj.edu.pl','dfgdgfdagdfgadgagdagdgfadga',NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -86,4 +87,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-04-13 14:16:08
+-- Dump completed on 2017-04-18 12:09:54

@@ -16,11 +16,12 @@ function executeSQL($container, $response, $sql, ...$args) {
       }
     try {
       $query->execute();
+      return $query;
     } catch(PDOException $e) {
       $logger->error("Database query execution error: ".var_export($e, true));
       return $response->withStatus(500)->withJson(['error' => ['message' => "Database query execution error"]]);
     }
-  return $query;
+//  return $query;
 }
 
 // Routes
@@ -228,14 +229,18 @@ $app->get('/bulba', function ($req, $resp, $args) {
 // Get an incident
 /////
 $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
-    $this->logger->info("JWT token: ".var_export($req->getAttribute("token"), true));
+//    $this->logger->info("JWT token: ".var_export($req->getAttribute("token"), true));
 
    $date = date_create_from_format('!Y-m-d', $args['date'])->format('Y-m-d');
    $query=executeSQL($this, $resp, "SELECT i.date, i.enter, i.exit, i.shiftlength FROM incidents i WHERE i.date=:date",
     ["date", $date, PDO::PARAM_STR]
   );
-  $incidents = $query->fetchAll();
+  $incidents = $query->fetch();
+  if ($incidents) {
   return $resp->withJson(['data' => $incidents]);
+  } else {
+  return $resp->withStatus(404)->withJson(['error' => ['message' => 'Record not found']]);
+  };
 });
 
 /////
@@ -243,14 +248,12 @@ $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
 /////
 $app->post('/incidents', function ($req, $resp, $args) {
   $body = $req->getParsedBody();
-  $this->logger->info("/vendors POST route; reqbody: ".var_export($body, true));
-  $this->logger->info("userLogin from JWT token: ".var_export($req->getAttribute("token")->data->userLogin, true));
+  $this->logger->info("/incidents POST route; reqbody: ".var_export($body, true));
   $user_id=$req->getAttribute("token")->data->userId;
   $date=$body['date'];
   $enter=$body['enter'];
   $shiftlength=$body['shiftlength'];
   if (empty($date) || empty($enter) || empty($shiftlength)) {
-    // no name given - problem!!!
     return $resp->withStatus(400)->withJson(['error' => ['message' => 'No complete set of params (date, enter, shiftlength) specified!']]);
   }
   $parsedDate = date_create_from_format('!Y-m-d', $date);
@@ -275,13 +278,16 @@ $app->post('/incidents', function ($req, $resp, $args) {
     return $resp->withStatus(400)->withJson(['error' => ['message' => 'Wrong _shiftlength_ - should be 1<=integer<=12']]);
   }
 
-  executeSQL($this, $resp, "INSERT INTO incidents (user_id, date, enter, shiftlength) VALUES (:user_id, :date, :enter, :shiftlength)", 
+  //$result = executeSQL($this, $resp, "INSERT INTO incidents (user_id, date, enter, shiftlength) VALUES (:user_id, :date, :enter, :shiftlength)", 
+  $result = executeSQL($this, $resp, "INSERT INTO incidents (user_id, date, enter, shiftlength) VALUES (:user_id, :date, :enter, :shiftlength) ON DUPLICATE KEY UPDATE enter = values(enter), shiftlength = values(shiftlength)", 
     ["user_id", $user_id, PDO::PARAM_INT],
     ["date", $insertDate, PDO::PARAM_STR],
     ["enter", $insertEnter, PDO::PARAM_STR],
     ["shiftlength", $parsedShiftlength, PDO::PARAM_INT]
   );
-    $incident_id = $this->db->lastInsertId();
-    return $resp->withStatus(201)->withJson(['data' => ['id' => $incident_id, 'user_id' => $user_id, 'date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $parsedShiftlength]]);
+  $this->logger->info("insert query result: ".var_export($result, true));
+    //$incident_id = $this->db->lastInsertId();
+    //return $resp->withStatus(201)->withJson(['data' => ['id' => $incident_id, 'user_id' => $user_id, 'date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $parsedShiftlength]]);
+    return $resp->withStatus(201)->withJson(['data' => ['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $parsedShiftlength]]);
     });
 
