@@ -8,6 +8,14 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\NullHandler;
 use Monolog\Formatter\LineFormatter;
 
+$container['errorHandler'] = function ($c) {
+    return function ($request, $response, $exception) use ($c) {
+      $status = ($exception instanceof ApiException) ? $exception->getCode() : 500;
+      $message = $exception->getMessage();
+      return $c['response']->withStatus($status)->withJson(['error' => ['message' => $message]]);
+    };
+  };
+
 $container['logger'] = function ($c) {
     $settings = $c->get('settings')['logger'];
     $logger = new Logger($settings['name']);

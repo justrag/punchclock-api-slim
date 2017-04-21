@@ -18,8 +18,8 @@ function executeSQL($container, $response, $sql, ...$args) {
       $query->execute();
       return $query;
     } catch(PDOException $e) {
-      $logger->error("Database query execution error: ".var_export($e, true));
-      return $response->withStatus(500)->withJson(['error' => ['message' => "Database query execution error"]]);
+      $logger->error("Database query execution error (".$e->getCode()."): ".$e->getMessage());
+      throw new ApiException("Database query execution error (".$e->getCode()."): ".$e->getMessage(),500);
     }
 //  return $query;
 }
@@ -171,7 +171,7 @@ $app->post('/auth/forgot-password', function ($req, $resp, $args) {
 // Password reset route (change password using token)
 /////
 $app->post('/auth/reset-password/{token}', function ($req, $resp, $args) {
-      $this->logger->info("time: ".time());
+  $this->logger->info("time: ".time());
   $query = executeSQL($this, $resp, "SELECT id, email FROM users WHERE rtoken=:rtoken AND rtokenexpire>:rtokenexpire",
     ["rtoken", $args['token'], PDO::PARAM_STR],
     ["rtokenexpire", time(), PDO::PARAM_INT]
@@ -230,10 +230,11 @@ $app->get('/bulba', function ($req, $resp, $args) {
 /////
 $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
 //    $this->logger->info("JWT token: ".var_export($req->getAttribute("token"), true));
-
+   $user_id=$req->getAttribute("token")->data->userId;
    $date = date_create_from_format('!Y-m-d', $args['date'])->format('Y-m-d');
-   $query=executeSQL($this, $resp, "SELECT i.date, i.enter, i.exit, i.shiftlength FROM incidents i WHERE i.date=:date",
-    ["date", $date, PDO::PARAM_STR]
+   $query=executeSQL($this, $resp, "SELECT i.date, i.enter, i.exit, i.shiftlength FROM incidents i WHERE i.date=:date AND i.user_id=:user_id",
+    ["date", $date, PDO::PARAM_STR],
+    ["user_id", $user_id, PDO::PARAM_INT]
   );
   $incidents = $query->fetch();
   if ($incidents) {
@@ -244,50 +245,79 @@ $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
 });
 
 /////
-// Post an incident
+// Upsert an incident
 /////
-$app->post('/incidents', function ($req, $resp, $args) {
-  $body = $req->getParsedBody();
-  $this->logger->info("/incidents POST route; reqbody: ".var_export($body, true));
+$app->put('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
+  $insertDate=verifyDate($args['date']);
   $user_id=$req->getAttribute("token")->data->userId;
-  $date=$body['date'];
-  $enter=$body['enter'];
-  $shiftlength=$body['shiftlength'];
-  if (empty($date) || empty($enter) || empty($shiftlength)) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => 'No complete set of params (date, enter, shiftlength) specified!']]);
+  $body = $req->getParsedBody();
+  if (empty($body['enter']) || empty($body['shiftlength'])) {  
+    return $resp->withStatus(400)->withJson(['error' => ['message' => 'No complete set of params (enter, shiftlength) specified!']]);
   }
-  $parsedDate = date_create_from_format('!Y-m-d', $date);
-  if (!$parsedDate) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => 'Wrong _date_ format - should be _YYYY-MM-DD_!']]);
-  }
-  $startDate = date_create_from_format('!Y-m-d', '2001-01-01');
-  $endDate = date_create(); // "now"
-  if ($parsedDate < $startDate || $parsedDate > $endDate) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => '_date_ out of range (2001-01-01 -> today)!']]);
-  }
-  $insertDate=$parsedDate->format('Y-m-d');
-  $this->logger->info("insertDate: ".var_export($insertDate, true));
-
-  $parsedEnter = date_create_from_format('H:i', $enter);
-  if (!$parsedEnter) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => 'Wrong _enter_ format - should be _HH:MM_!']]);
-  }
-  $insertEnter = $parsedEnter->format('H:i');
-  $parsedShiftlength = filter_var($shiftlength, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]);
-  if (!$parsedShiftlength) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => 'Wrong _shiftlength_ - should be 1<=integer<=12']]);
-  }
-
-  //$result = executeSQL($this, $resp, "INSERT INTO incidents (user_id, date, enter, shiftlength) VALUES (:user_id, :date, :enter, :shiftlength)", 
+  $insertEnter = verifyEnter($body['enter']);
+  $insertShiftlength = verifyShiftlength($body['shiftlength']);
   $result = executeSQL($this, $resp, "INSERT INTO incidents (user_id, date, enter, shiftlength) VALUES (:user_id, :date, :enter, :shiftlength) ON DUPLICATE KEY UPDATE enter = values(enter), shiftlength = values(shiftlength)", 
     ["user_id", $user_id, PDO::PARAM_INT],
     ["date", $insertDate, PDO::PARAM_STR],
     ["enter", $insertEnter, PDO::PARAM_STR],
-    ["shiftlength", $parsedShiftlength, PDO::PARAM_INT]
+    ["shiftlength", $insertShiftlength, PDO::PARAM_INT]
   );
-  $this->logger->info("insert query result: ".var_export($result, true));
-    //$incident_id = $this->db->lastInsertId();
-    //return $resp->withStatus(201)->withJson(['data' => ['id' => $incident_id, 'user_id' => $user_id, 'date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $parsedShiftlength]]);
-    return $resp->withStatus(201)->withJson(['data' => ['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $parsedShiftlength]]);
-    });
+  return $resp->withStatus(201)->withJson(['data' => ['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $insertShiftlength]]);
+ });
+
+function verifyDate($dateArg) {
+  $parsedDate = date_create_from_format('!Y-m-d', $dateArg);
+  if (!$parsedDate) {
+    throw new ApiException('Wrong _date_ format - should be _YYYY-MM-DD_!', 400);
+  }
+  $startDate = date_create_from_format('!Y-m-d', '2001-01-01');
+  $endDate = date_create(); // "now"
+  if ($parsedDate < $startDate || $parsedDate > $endDate) {
+    throw new ApiException('_date_ out of range (2001-01-01 -> today)!', 400);
+  }
+  return $parsedDate->format('Y-m-d');
+}
+function verifyEnter($enterArg) {
+  $parsedEnter = date_create_from_format('H:i', $enterArg);
+  if (!$parsedEnter) {
+    throw new ApiException('Wrong _enter_ format - should be _HH:MM_!', 400);
+  }
+  return $parsedEnter->format('H:i');
+}
+function verifyShiftlength($shiftlengthArg) {
+  $parsedShiftlength = filter_var($shiftlengthArg, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]);
+  if (!$parsedShiftlength) {
+    throw new ApiException('Wrong _shiftlength_ - should be 1<=integer<=12', 400);
+  }
+  return $parsedShiftlength;
+}
+
+/////
+// Update an incident (partially)
+/////
+$app->patch('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
+  $insertDate=verifyDate($args['date'], $resp);
+  $user_id=$req->getAttribute("token")->data->userId;
+  $body = $req->getParsedBody();
+  if (empty($body['enter']) && empty($body['shiftlength'])) {
+    return $resp->withStatus(400)->withJson(['error' => ['message' => 'No patch param specified (enter, shiftlength)!']]);
+  }
+  $binding = [
+    ["user_id", $user_id, PDO::PARAM_INT],
+    ["date", $insertDate, PDO::PARAM_STR]
+  ];
+  $fields=[];
+  if (!empty($body['enter'])) {
+    $insertEnter = verifyEnter($body['enter']);
+    $binding[] = ["enter", $insertEnter, PDO::PARAM_STR];
+    $fields[]="enter=:enter";
+  }
+  if (!empty($body['shiftlength'])) {
+    $insertShiftlength = verifyShiftlength($body['shiftlength']);
+    $binding[] = ["shiftlength", $insertShiftlength, PDO::PARAM_INT];
+    $fields[]="shiftlength=:shiftlength";
+  }
+  $result = executeSQL($this, $resp, "UPDATE incidents SET ".implode(',',$fields)." WHERE date=:date AND user_id=:user_id", ...$binding);
+  return $resp->withStatus(200)->withJson(['data' => ['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $insertShiftlength]]);
+ });
 

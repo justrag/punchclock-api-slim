@@ -12,6 +12,11 @@ if (PHP_SAPI == 'cli-server') {
 }
 
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../src/ApiException.php';
+//spl_autoload_register(function ($classname) {
+//    require ("../src/Error/" . $classname . ".php");
+//});
+
 $dotenv = new Dotenv\Dotenv(__DIR__ . '/../');
 $dotenv->load();
 $dotenv->required(['DB_NAME','DB_USER','DB_PASSWORD','DB_HOST','JWT_SECRET','MAIL_LOGIN','MAIL_PASSWORD','MAIL_HOST','MAIL_PORT'])->notEmpty();
