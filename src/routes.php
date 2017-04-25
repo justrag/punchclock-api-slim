@@ -240,7 +240,7 @@ $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
   if ($incidents) {
   return $resp->withJson(['data' => $incidents]);
   } else {
-  return $resp->withStatus(404)->withJson(['error' => ['message' => 'Record not found']]);
+  return $resp->withStatus(404)->withJson(['error' => ['date' => $args['date'], 'message' => 'Record not found']]);
   };
 });
 
