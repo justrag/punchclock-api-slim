@@ -237,11 +237,8 @@ $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
     ["user_id", $user_id, PDO::PARAM_INT]
   );
   $incidents = $query->fetch();
-  if ($incidents) {
-  return $resp->withJson(['data' => $incidents]);
-  } else {
-  return $resp->withStatus(404)->withJson(['error' => ['date' => $args['date'], 'message' => 'Record not found']]);
-  };
+//  $this->logger->info("$incidents: ".var_export($incidents, true));
+  return $resp->withJson(['data' => ($incidents ? $incidents : [])]);
 });
 
 /////
