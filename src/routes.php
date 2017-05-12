@@ -229,7 +229,6 @@ $app->get('/bulba', function ($req, $resp, $args) {
 // Get an incident
 /////
 $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
-//    $this->logger->info("JWT token: ".var_export($req->getAttribute("token"), true));
    $user_id=$req->getAttribute("token")->data->userId;
    $date = date_create_from_format('!Y-m-d', $args['date'])->format('Y-m-d');
    $query=executeSQL($this, $resp, "SELECT i.date, i.enter, i.exit, i.shiftlength FROM incidents i WHERE i.date=:date AND i.user_id=:user_id",
@@ -237,8 +236,8 @@ $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
     ["user_id", $user_id, PDO::PARAM_INT]
   );
   $incidents = $query->fetch();
-//  $this->logger->info("$incidents: ".var_export($incidents, true));
-  return $resp->withJson(['data' => ($incidents ? $incidents : [])]);
+  //return $resp->withJson(['data' => ($incidents ? $incidents : [])]);
+  return $resp->withJson(['data' => $incidents]);
 });
 
 /////
