@@ -236,8 +236,8 @@ $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
     ["user_id", $user_id, PDO::PARAM_INT]
   );
   $incidents = $query->fetch();
-  //return $resp->withJson(['data' => ($incidents ? $incidents : [])]);
-  return $resp->withJson(['data' => $incidents]);
+  return $resp->withJson(['data' => ($incidents ? [$incidents] : [])]);
+  //return $resp->withJson(['data' => $incidents]);
 });
 
 /////
