@@ -231,13 +231,30 @@ $app->get('/bulba', function ($req, $resp, $args) {
 $app->get('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
    $user_id=$req->getAttribute("token")->data->userId;
    $date = date_create_from_format('!Y-m-d', $args['date'])->format('Y-m-d');
-   $query=executeSQL($this, $resp, "SELECT i.date, i.enter, i.exit, i.shiftlength FROM incidents i WHERE i.date=:date AND i.user_id=:user_id",
+   $query=executeSQL($this, $resp, "SELECT i.date, DATE_FORMAT(i.enter, '%H:%i') AS 'enter', DATE_FORMAT(i.exit, '%H:%i') AS 'exit', i.shiftlength FROM incidents i WHERE i.date=:date AND i.user_id=:user_id",
     ["date", $date, PDO::PARAM_STR],
     ["user_id", $user_id, PDO::PARAM_INT]
   );
   $incidents = $query->fetch();
   return $resp->withJson(['data' => ($incidents ? [$incidents] : [])]);
-  //return $resp->withJson(['data' => $incidents]);
+});
+
+/////
+// Get a stats sum
+/////
+$app->get('/incidents/stats/{begin:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}/{end:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', function ($req, $resp, $args) {
+   $user_id=$req->getAttribute("token")->data->userId;
+   $begin = date_create_from_format('!Y-m-d', $args['begin'])->format('Y-m-d');
+   $end = date_create_from_format('!Y-m-d', $args['end'])->format('Y-m-d');
+   $query=executeSQL($this, $resp, "SELECT count(id) as days, sum(shiftlength)*60 as shouldwork, sum(timestampdiff(MINUTE,i.enter,i.exit)) as didwork FROM incidents i WHERE (i.date BETWEEN :begin AND :end) AND i.exit is not null AND i.user_id=:user_id",
+    ["begin", $begin, PDO::PARAM_STR],
+    ["end", $end, PDO::PARAM_STR],
+    ["user_id", $user_id, PDO::PARAM_INT]
+  );
+  $incidents = $query->fetch();
+  $incidents['begin']=$begin;
+  $incidents['end']=$end;
+  return $resp->withJson(['data' => $incidents]);
 });
 
 /////
@@ -258,7 +275,7 @@ $app->put('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', functi
     ["enter", $insertEnter, PDO::PARAM_STR],
     ["shiftlength", $insertShiftlength, PDO::PARAM_INT]
   );
-  return $resp->withStatus(201)->withJson(['data' => ['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $insertShiftlength]]);
+  return $resp->withStatus(201)->withJson(['data' => [['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $insertShiftlength]]]);
  });
 
 function verifyDate($dateArg) {
@@ -280,6 +297,13 @@ function verifyEnter($enterArg) {
   }
   return $parsedEnter->format('H:i');
 }
+function verifyExit($exitArg) {
+  $parsedExit = date_create_from_format('H:i', $exitArg);
+  if (!$parsedExit) {
+    throw new ApiException('Wrong _exit format - should be _HH:MM_!', 400);
+  }
+  return $parsedExit->format('H:i');
+}
 function verifyShiftlength($shiftlengthArg) {
   $parsedShiftlength = filter_var($shiftlengthArg, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]);
   if (!$parsedShiftlength) {
@@ -295,9 +319,10 @@ $app->patch('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', func
   $insertDate=verifyDate($args['date'], $resp);
   $user_id=$req->getAttribute("token")->data->userId;
   $body = $req->getParsedBody();
-  if (empty($body['enter']) && empty($body['shiftlength'])) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => 'No patch param specified (enter, shiftlength)!']]);
+  if (empty($body['enter']) && empty($body['shiftlength']) && empty($body['exit']) ) {
+    return $resp->withStatus(400)->withJson(['error' => ['message' => 'No patch param specified (enter, exit, shiftlength)!']]);
   }
+  $data = ["date" => $insertDate];
   $binding = [
     ["user_id", $user_id, PDO::PARAM_INT],
     ["date", $insertDate, PDO::PARAM_STR]
@@ -307,13 +332,21 @@ $app->patch('/incidents/{date:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}', func
     $insertEnter = verifyEnter($body['enter']);
     $binding[] = ["enter", $insertEnter, PDO::PARAM_STR];
     $fields[]="enter=:enter";
+    $data["enter"]=$insertEnter;
+  }
+  if (!empty($body['exit'])) {
+    $insertExit = verifyExit($body['exit']);
+    $binding[] = ["exit", $insertExit, PDO::PARAM_STR];
+    $fields[]="i.exit=:exit";
+    $data["exit"]=$insertExit;
   }
   if (!empty($body['shiftlength'])) {
     $insertShiftlength = verifyShiftlength($body['shiftlength']);
     $binding[] = ["shiftlength", $insertShiftlength, PDO::PARAM_INT];
     $fields[]="shiftlength=:shiftlength";
+    $data["shiftlength"]=$insertShiftlength;
   }
-  $result = executeSQL($this, $resp, "UPDATE incidents SET ".implode(',',$fields)." WHERE date=:date AND user_id=:user_id", ...$binding);
-  return $resp->withStatus(200)->withJson(['data' => ['date' => $insertDate, 'enter' => $insertEnter, 'shiftlength' => $insertShiftlength]]);
+  $result = executeSQL($this, $resp, "UPDATE incidents i SET ".implode(',',$fields)." WHERE date=:date AND user_id=:user_id", ...$binding);
+  return $resp->withStatus(200)->withJson(['data' => [$data]]);
  });
 
