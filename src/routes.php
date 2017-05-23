@@ -246,7 +246,8 @@ $app->get('/incidents/stats/{begin:[2-9][0-9][0-9][0-9]-[01][0-9]-[0123][0-9]}/{
    $user_id=$req->getAttribute("token")->data->userId;
    $begin = date_create_from_format('!Y-m-d', $args['begin'])->format('Y-m-d');
    $end = date_create_from_format('!Y-m-d', $args['end'])->format('Y-m-d');
-   $query=executeSQL($this, $resp, "SELECT count(id) as days, sum(shiftlength)*60 as shouldwork, sum(timestampdiff(MINUTE,i.enter,i.exit)) as didwork FROM incidents i WHERE (i.date BETWEEN :begin AND :end) AND i.exit is not null AND i.user_id=:user_id",
+   $this->logger->info("/stats --- begin: ".var_export($begin, true)." end: ".var_export($end, true));
+   $query=executeSQL($this, $resp, "SELECT count(id) as days, COALESCE(sum(shiftlength),0)*60 as shouldwork, coalesce(sum(timestampdiff(MINUTE,i.enter,i.exit)),0) as didwork FROM incidents i WHERE (i.date BETWEEN :begin AND :end) AND i.exit is not null AND i.user_id=:user_id",
     ["begin", $begin, PDO::PARAM_STR],
     ["end", $end, PDO::PARAM_STR],
     ["user_id", $user_id, PDO::PARAM_INT]
