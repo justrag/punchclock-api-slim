@@ -30,6 +30,27 @@ function executeSQL($container, $response, $sql, ...$args) {
 // BEGIN AUTH STUFF
 /////////////////////////////
 
+function generateJWT($host,$user_id,$login) {
+  $now = new DateTime();
+  $future = new DateTime("now +12 hours");
+  $jti = Base62::encode(random_bytes(16));
+
+  $payload = [
+    "iat" => $now->getTimeStamp(),
+    "exp" => $future->getTimeStamp(),
+    "jti" => $jti,
+    "iss" => $host,
+  //        "sub" => $server["PHP_AUTH_USER"],
+  //        "scope" => $scopes
+    "data" => [
+      "userId" => $user_id,
+      "userLogin" => $login,
+    ]
+  ];
+  $secret = getenv("JWT_SECRET");
+  return JWT::encode($payload, $secret, "HS256");
+}
+
 /////
 // Create an account
 /////
@@ -67,7 +88,12 @@ $app->post('/auth/create', function ($req, $resp, $args) {
     ["email", $email, PDO::PARAM_STR],
     ["name", $name, PDO::PARAM_STR]
   );
-  return $resp->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'login' => $login, 'email' => $email, 'name' => $name]]);
+
+  $server = $req->getServerParams();
+  $host=$server["HTTP_HOST"];
+  $token = generateJWT($host,$uuid,$login);
+
+  return $resp->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'login' => $login, 'email' => $email, 'name' => $name, 'token' => $token]]);
 });
 
 /////
@@ -86,12 +112,12 @@ $app->post('/auth/login', function ($req, $resp, $args) {
     return $resp->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
   }
 
-  $query = executeSQL($this, $resp, "SELECT id, password FROM users WHERE login=:login",
+  $query = executeSQL($this, $resp, "SELECT uuid, password FROM users WHERE login=:login",
     ["login", $login, PDO::PARAM_STR]
   );
   $row = $query->fetch();
   $passwordHash = $row['password'];
-  $user_id=$row['id'];
+  $user_uuid=$row['uuid'];
 
   if (password_verify($password, $passwordHash) === false) {
     $this->logger->info("password_verify failed: login ".$login." password ".$password);
@@ -112,7 +138,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   //        "sub" => $server["PHP_AUTH_USER"],
   //        "scope" => $scopes
     "data" => [
-      "userId" => $user_id,
+      "userId" => $user_uuid,
       "userLogin" => $login,
     ]
   ];
