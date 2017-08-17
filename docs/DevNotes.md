@@ -1,3 +1,18 @@
+# How to?
+Install mysql
+Install php and some modules
+>sudo apt-get install php curl php-curl php-mcrypt php-mbstring php-gettext php-mysql
+Install composer
+then
+>php composer.phar install
+then
+>cd data
+>./InitTestingDatabase.sh
+(need to know mysql's root password)
+then
+>php composer.phar run-script start
+
+
 # Random Notes in development
 
 How to change database structure
