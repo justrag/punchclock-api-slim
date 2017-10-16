@@ -55,3 +55,42 @@ mysql upsert
 (pack_id, type, medium) is a unique composite key
 get amount data for the pack
 select p.access_seq,a.type,a.medium,a.number from packs p join amounts a on p.id=a.pack_id where p.id=33;
+
+
+# Removing unneeded user columns (login & name)
+mysql> describe users;
++--------------+--------------+------+-----+---------+----------------+
+| Field        | Type         | Null | Key | Default | Extra          |
++--------------+--------------+------+-----+---------+----------------+
+| id           | int(11)      | NO   | PRI | NULL    | auto_increment |
+| uuid         | varchar(255) | NO   | UNI | NULL    |                |
+| login        | varchar(255) | NO   | UNI | NULL    |                |
+| password     | varchar(255) | NO   |     | NULL    |                |
+| email        | varchar(255) | NO   |     | NULL    |                |
+| name         | varchar(255) | NO   |     | NULL    |                |
+| rtoken       | varchar(255) | YES  |     | NULL    |                |
+| rtokenexpire | int(11)      | YES  |     | NULL    |                |
++--------------+--------------+------+-----+---------+----------------+
+8 rows in set (0,11 sec)
+
+mysql> alter table users drop Column name;
+Query OK, 0 rows affected (1,59 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> alter table users drop Column login;
+Query OK, 0 rows affected (0,68 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> describe users;
++--------------+--------------+------+-----+---------+----------------+
+| Field        | Type         | Null | Key | Default | Extra          |
++--------------+--------------+------+-----+---------+----------------+
+| id           | int(11)      | NO   | PRI | NULL    | auto_increment |
+| uuid         | varchar(255) | NO   | UNI | NULL    |                |
+| password     | varchar(255) | NO   |     | NULL    |                |
+| email        | varchar(255) | NO   |     | NULL    |                |
+| rtoken       | varchar(255) | YES  |     | NULL    |                |
+| rtokenexpire | int(11)      | YES  |     | NULL    |                |
++--------------+--------------+------+-----+---------+----------------+
+6 rows in set (0,00 sec)
+

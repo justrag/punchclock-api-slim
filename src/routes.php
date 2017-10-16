@@ -58,10 +58,6 @@ $app->post('/auth/create', function ($req, $resp, $args) {
 
   $body = $req->getParsedBody();
 
-  $login=$body['login'];
-  if (empty($login) || strlen($login) < 3 ) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
-  }
   $password=$body['password'];
   if (empty($password) || strlen($password) < 8 ) {
     return $resp->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
@@ -70,10 +66,6 @@ $app->post('/auth/create', function ($req, $resp, $args) {
   if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     return $resp->withStatus(400)->withJson(['error' => ['message' => "Email incorrect!"]]);
   }
-  $name=$body['name'];
-  if (empty($name) || strlen($name) < 5 ) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => "Name's too short!"]]);
-  }
   // Create password hash
   $passwordHash = password_hash($password, PASSWORD_DEFAULT, ['cost' => 12]);
   if ($passwordHash === false) {
@@ -81,19 +73,17 @@ $app->post('/auth/create', function ($req, $resp, $args) {
   }
 
   $uuid = Uuid::uuid4()->toString();
-  executeSQL($this, $resp, "INSERT INTO users (uuid, login, password, email, name) VALUES (:uuid, :login, :password, :email, :name)", 
+  executeSQL($this, $resp, "INSERT INTO users (uuid, password, email) VALUES (:uuid, :password, :email)", 
     ["uuid", $uuid, PDO::PARAM_STR],
-    ["login", $login, PDO::PARAM_STR],
     ["password", $passwordHash, PDO::PARAM_STR],
-    ["email", $email, PDO::PARAM_STR],
-    ["name", $name, PDO::PARAM_STR]
+    ["email", $email, PDO::PARAM_STR]
   );
 
   $server = $req->getServerParams();
   $host=$server["HTTP_HOST"];
-  $token = generateJWT($host,$uuid,$login);
+  $token = generateJWT($host,$uuid,$email);
 
-  return $resp->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'login' => $login, 'email' => $email, 'name' => $name, 'token' => $token]]);
+  return $resp->withStatus(201)->withJson(['data' => ['uuid' => $uuid, 'email' => $email, 'token' => $token]]);
 });
 
 /////
@@ -101,27 +91,27 @@ $app->post('/auth/create', function ($req, $resp, $args) {
 /////
 $app->post('/auth/login', function ($req, $resp, $args) {
   $body = $req->getParsedBody();
-  $this->logger->info("/auth/login POST route; reqbody: ".var_export($body, true));
+//  $this->logger->info("/auth/login POST route; reqbody: ".var_export($body, true));
 
-  $login=$body['login'];
-  if (empty($login) || strlen($login) < 3 ) {
-    return $resp->withStatus(400)->withJson(['error' => ['message' => "Login's too short!"]]);
+  $email=$body['email'];
+  if (empty($email) || strlen($email) < 3 ) {
+    return $resp->withStatus(400)->withJson(['error' => ['message' => "Email's too short!"]]);
   }
   $password=$body['password'];
   if (empty($password) || strlen($password) < 8 ) {
     return $resp->withStatus(400)->withJson(['error' => ['message' => "Password's too short!"]]);
   }
 
-  $query = executeSQL($this, $resp, "SELECT uuid, password FROM users WHERE login=:login",
-    ["login", $login, PDO::PARAM_STR]
+  $query = executeSQL($this, $resp, "SELECT uuid, password FROM users WHERE email=:email",
+    ["email", $email, PDO::PARAM_STR]
   );
   $row = $query->fetch();
   $passwordHash = $row['password'];
   $user_uuid=$row['uuid'];
 
   if (password_verify($password, $passwordHash) === false) {
-    $this->logger->info("password_verify failed: login ".$login." password ".$password);
-    return $resp->withStatus(401)->withJson(['error' => ['message' => "Incorrect login or password"]]);
+    $this->logger->info("password_verify failed: email ".$email." password ".$password);
+    return $resp->withStatus(401)->withJson(['error' => ['message' => "Incorrect email or password"]]);
   }
 
   $now = new DateTime();
@@ -139,7 +129,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   //        "scope" => $scopes
     "data" => [
       "userId" => $user_uuid,
-      "userLogin" => $login,
+      "userEmail" => $email,
     ]
   ];
 
@@ -147,7 +137,7 @@ $app->post('/auth/login', function ($req, $resp, $args) {
   $token = JWT::encode($payload, $secret, "HS256");
   $data["status"] = "ok";
   //$data["id"] = $id;
-  $data["login"] = $login;
+  $data["email"] = $email;
   $data["token"] = $token;
 
   return $resp->withJson(['data' => $data]);
