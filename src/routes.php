@@ -168,13 +168,13 @@ $app->post('/auth/forgot-password', function ($req, $resp, $args) {
     ["rtokenexpire", $expire, PDO::PARAM_INT],
     ["user_id", $user_id, PDO::PARAM_INT]
   );
-  $mailText = 'You are receiving this because you (or someone else) have requested the reset of the password for your account.'.PHP_EOL.PHP_EOL
-            .'Please click on the following link, or paste this into your browser to complete the process:'.PHP_EOL.PHP_EOL
-            .'http://'.$req->getUri()->getHost().'/reset-password/'.$token.PHP_EOL.PHP_EOL
-            .'If you did not request this, please ignore this email and your password will remain unchanged.';
-  $message = Swift_Message::newInstance('Reset Password')
+  $mailText = 'Otrzymujesz tego maila, ponieważ zażądałeś zmiany hasła na Twoim koncie.'.PHP_EOL.PHP_EOL
+            .'Aby kontynuować, kliknij na poniższym linku lub wklej ten adres do przeglądarki:'.PHP_EOL.PHP_EOL
+            .'http://'.$req->getUri()->getHost().'/resetpassword/'.$token.PHP_EOL.PHP_EOL
+            .'Jeśli nie żądałeś zmiany hasła, możesz zignorować tego maila, by pozostawić hasło bez zmian.';
+  $message = Swift_Message::newInstance('Reset hasła')
                 ->setFrom(array('reset@odbijsie.pl' => 'Reset Password Request'))
-                ->setTo(array($email => 'Punchclock User'))
+                ->setTo(array($email => 'Użytkownik odbijsie.pl'))
                 ->setBody($mailText);
   if ($this->mailer->send($message)) {
     return $resp->withStatus(200)->withJson(['data' => ['message' => 'Please check your email for the link to reset your password.']]);
@@ -214,11 +214,11 @@ $app->post('/auth/reset-password/{token}', function ($req, $resp, $args) {
     ["password", $passwordHash, PDO::PARAM_STR],
     ["user_id", $user_id, PDO::PARAM_INT]
   );
-        $mailText='You are receiving this email because you changed your password.'.PHP_EOL.PHP_EOL
-          .'If you did not request this change, please contact us immediately.';
-  $message = Swift_Message::newInstance('Password Changed')
+        $mailText='Ten mail jest potwierdzeniem zmiany hasła w serwisie odbijsie.pl.'.PHP_EOL.PHP_EOL
+          .'Życzymy miłego dalszego korzystania.';
+  $message = Swift_Message::newInstance('Hasło zmienione.')
                 ->setFrom(array('reset@odbijsie.pl' => 'Reset Password Confirmation'))
-                ->setTo(array($email => 'Punchclock User'))
+                ->setTo(array($email => 'Użytkownik odbijsie.pl'))
                 ->setBody($mailText);
   if ($this->mailer->send($message)) {
     return $resp->withStatus(200)->withJson(['data' => ['message' => 'Password changed successfully. Please login with your new password.']]);
